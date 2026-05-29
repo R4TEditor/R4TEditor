@@ -12,7 +12,7 @@
 > A brand new SkriptLang editor, meant to replace popular options (skeditor, vscode, etc),
 its mostly lightweight and runs on python.
 If you find any issues, please report them [here](https://github.com/R4TEditor/R4TEditor/issues)
-If you want to see the full list of features, you can find them here [Feature List](Feature%20List.md)
+If you want to see the full list of features, you can find that [here](Feature%20List.md)
 
 Thanks, R4T Out.
 
