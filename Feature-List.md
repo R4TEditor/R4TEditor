@@ -25,7 +25,7 @@
     - [x] Warn on deprecated syntax
     - [x] Suppress warnings with #! ignore
     - [x] Silently skips comments, blank lines, and headers
-- [x] Misc and UI
+- [ ] Misc and UI
     - [X] Switch between built-in themes
     - [X] Upload custom theme files
     - [X] Adjustable font family and size
