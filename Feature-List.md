@@ -46,5 +46,6 @@
     - [X] Automatic script header on new file
     - [ ] SkriptHub syntax search and docs browser
     - [ ] Discord RPC
+    - [ ] Colaboration between users
 
 Thanks, R4T Out.
