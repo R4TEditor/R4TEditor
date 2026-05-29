@@ -45,5 +45,6 @@
     - [X] HTML color code preview
     - [X] Automatic script header on new file
     - [ ] SkriptHub syntax search and docs browser
+    - [ ] Discord RPC
 
 Thanks, R4T Out.
