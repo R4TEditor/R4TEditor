@@ -1,4 +1,4 @@
-#R4TEditor
+# R4TEditor
 
 A brand new SkriptLang editor, meant to replace popular options (skeditor, vscode, etc),
 its mostly lightweight and runs on python.
