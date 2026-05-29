@@ -1,0 +1,112 @@
+{
+  "id": "royal-purple-dark",
+  "name": "Royal Purple",
+  "base": "dark",
+  "accent": "#6B2FA0",
+  "editor": {
+    "background": "#0f0f10",
+    "foreground": "#e8e8ec",
+    "lineNumbers": "#555568",
+    "selection": "#6B2FA030",
+    "cursor": "#6B2FA0",
+    "activeLine": "#ffffff08",
+    "border": "#2a2a30"
+  },
+  "syntax": {
+    "keyword": {
+      "color": "#c084f5",
+      "bold": true
+    },
+    "event": {
+      "color": "#c084f5",
+      "bold": true
+    },
+    "eventName": {
+      "color": "#7dd3fc",
+      "bold": true
+    },
+    "effect": {
+      "color": "#86efac"
+    },
+    "expression": {
+      "color": "#fde68a"
+    },
+    "variable": {
+      "color": "#f9a8d4"
+    },
+    "comment": {
+      "color": "#555568",
+      "italic": true
+    },
+    "commentBang": {
+      "color": "#f87171",
+      "bold": true
+    },
+    "string": {
+      "color": "#a5f3fc"
+    },
+    "number": {
+      "color": "#fb923c"
+    },
+    "type": {
+      "color": "#818cf8"
+    },
+    "operator": {
+      "color": "#cbd5e1"
+    },
+    "formatCode": {
+      "color": "#a78bfa",
+      "bold": true
+    },
+    "funcKeyword": {
+      "color": "#c084f5",
+      "bold": true
+    },
+    "funcName": {
+      "color": "#fde68a",
+      "bold": true
+    },
+    "paramName": {
+      "color": "#7dd3fc"
+    },
+    "paramColon": {
+      "color": "#cbd5e1"
+    },
+    "paramType": {
+      "color": "#a5f3fc"
+    },
+    "punctuation": {
+      "color": "#cbd5e1"
+    },
+    "condition": {
+      "color": "#c4b5fd"
+    },
+    "property": {
+      "color": "#94a3b8"
+    }
+  },
+  "skript_colors": {
+    "&0": "#000000",
+    "&1": "#0000AA",
+    "&2": "#00AA00",
+    "&3": "#00AAAA",
+    "&4": "#AA0000",
+    "&5": "#AA00AA",
+    "&6": "#FFAA00",
+    "&7": "#AAAAAA",
+    "&8": "#555555",
+    "&9": "#5555FF",
+    "&a": "#55FF55",
+    "&b": "#55FFFF",
+    "&c": "#FF5555",
+    "&d": "#FF55FF",
+    "&e": "#FFFF55",
+    "&f": "#FFFFFF",
+    "&l": null,
+    "&o": null,
+    "&n": null,
+    "&m": null,
+    "&k": null,
+    "&r": null
+  }
+}

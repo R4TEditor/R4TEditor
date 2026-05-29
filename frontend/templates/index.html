@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>R4TEditor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/main.css" />
+</head>
+<body>
+
+<!-- TOP BAR -->
+<header class="topbar">
+  <div class="topbar-left">
+    <div class="logo"><span class="logo-r4t">R4T</span><span class="logo-editor">Editor</span></div>
+    <div class="project-name" id="project-name">No Project Open</div>
+  </div>
+  <div class="topbar-center">
+    <div class="connection-status" id="connection-status">
+      <span class="status-dot"></span>
+      <span class="status-label">Local</span>
+    </div>
+    <div class="connection-status" id="internet-status" title="Internet connectivity">
+      <span class="status-dot status-dot--internet" id="internet-dot"></span>
+      <span class="status-label" id="internet-label">Online</span>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <button class="icon-btn" id="reload-env-btn" title="Reload Environment">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M13.65 2.35A8 8 0 1 0 15 8h-1.5A6.5 6.5 0 1 1 8 1.5a6.45 6.45 0 0 1 4.59 1.91L10 6h5V1l-1.35 1.35z" fill="currentColor"/></svg>
+      <span>Reload Env</span>
+    </button>
+    <button class="icon-btn icon-btn--icon-only" id="debug-toggle-btn" title="Toggle Debug Console">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="10" rx="1.5" stroke="currentColor" stroke-width="1.4" fill="none"/><path d="M4 6h8M4 9h5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+    </button>
+    <button class="icon-btn icon-btn--icon-only" id="settings-btn" title="Settings (Ctrl+,)">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 5a3 3 0 1 0 0 6 3 3 0 0 0 0-6zm0 4.5A1.5 1.5 0 1 1 8 6.5a1.5 1.5 0 0 1 0 3z" fill="currentColor"/><path d="M14.5 8c0-.31-.02-.62-.07-.93l1.44-1.12-1.5-2.6-1.76.67A6.5 6.5 0 0 0 11 3.34L10.75 1.5h-3L7.5 3.34a6.5 6.5 0 0 0-1.61.68L4.13 3.35l-1.5 2.6 1.44 1.12A6.46 6.46 0 0 0 4 8c0 .31.02.62.07.93L2.63 10.05l1.5 2.6 1.76-.67c.49.27 1.03.49 1.61.68l.25 1.84h3l.25-1.84a6.5 6.5 0 0 0 1.61-.68l1.76.67 1.5-2.6-1.44-1.12c.05-.31.07-.62.07-.93z" fill="currentColor"/></svg>
+    </button>
+  </div>
+</header>
+
+<!-- MAIN LAYOUT -->
+<div class="layout" id="main-layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <!-- Sidebar section tabs -->
+    <div class="sidebar-tabs">
+      <button class="sidebar-tab sidebar-tab--active" data-section="explorer" title="Explorer">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M1 3a1 1 0 0 1 1-1h4l2 2h6a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V3z" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>
+      </button>
+      <button class="sidebar-tab" data-section="sftp" title="SFTP Connections">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1z" stroke="currentColor" stroke-width="1.4" fill="none"/><path d="M5 8h6M8 5l3 3-3 3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="sidebar-tab" data-section="environment" title="Environment">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.4" fill="none"/><path d="M5 8h2l1-2 1.5 4 1-2H11" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+
+    <!-- EXPLORER SECTION -->
+    <div class="sidebar-section" id="section-explorer">
+      <div class="sidebar-header">
+        <span class="sidebar-title">Explorer</span>
+        <div style="display:flex;gap:2px">
+          <button class="icon-btn icon-btn--icon-only icon-btn--sm" id="add-explorer-tab-btn" title="Open Another Folder">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </button>
+          <button class="icon-btn icon-btn--icon-only icon-btn--sm" id="open-folder-btn" title="Open Folder">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M1 3a1 1 0 0 1 1-1h4l2 2h6a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V3z" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+          </button>
+        </div>
+      </div>
+      <!-- Explorer folder tabs -->
+      <div class="explorer-tabs" id="explorer-tabs"></div>
+      <!-- File tree area -->
+      <div class="file-tree" id="file-tree">
+        <div class="file-tree-empty">
+          <svg width="32" height="32" viewBox="0 0 16 16" fill="none" style="opacity:0.25"><path d="M1 3a1 1 0 0 1 1-1h4l2 2h6a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V3z" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>
+          <p>Open a folder to<br>start editing</p>
+          <button class="btn btn--primary" id="open-folder-btn2">Open Folder</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SFTP SECTION -->
+    <div class="sidebar-section sidebar-section--hidden" id="section-sftp">
+      <div class="sidebar-header">
+        <span class="sidebar-title">SFTP</span>
+        <button class="icon-btn icon-btn--icon-only icon-btn--sm" id="sftp-add-site-btn" title="Add SFTP Site">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <!-- Saved sites list -->
+      <div class="sftp-sites" id="sftp-sites">
+        <div class="sftp-sites-empty">No saved sites.<br>Click + to add one.</div>
+      </div>
+      <!-- Active connections -->
+      <div class="sftp-connections-header" id="sftp-connections-header" style="display:none">
+        <span class="sidebar-title" style="font-size:9px">Active Connections</span>
+      </div>
+      <div class="sftp-connections" id="sftp-connections"></div>
+      <!-- Connection trees (file browsers per active connection) -->
+      <div id="sftp-trees-area"></div>
+    </div>
+
+    <!-- ENVIRONMENT SECTION -->
+    <div class="sidebar-section sidebar-section--hidden" id="section-environment">
+      <div class="sidebar-header">
+        <span class="sidebar-title">Environment</span>
+        <button class="icon-btn icon-btn--icon-only icon-btn--sm" id="reload-env-sidebar-btn" title="Rescan">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M13.5 2.5A7 7 0 1 0 14 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M14 2.5V6h-3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+      <div class="env-panel" id="env-panel">
+        <div class="env-none">Open a folder to detect Skript &amp; addons.</div>
+      </div>
+    </div>
+
+    <div class="sidebar-resize" id="sidebar-resize"></div>
+  </aside>
+
+  <!-- EDITOR AREA -->
+  <main class="editor-area">
+
+    <!-- TAB BAR -->
+    <div class="tab-bar" id="tab-bar">
+      <div class="tab-list" id="tab-list"></div>
+      <div class="tab-bar-actions">
+        <button class="icon-btn icon-btn--icon-only icon-btn--sm" id="new-file-btn" title="New File">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- FIND & REPLACE BAR -->
+    <div class="find-replace-bar" id="find-replace-bar" style="display:none">
+      <div class="fr-row">
+        <div class="fr-input-wrap">
+          <input type="text" id="fr-find" class="fr-input" placeholder="Find…" autocomplete="off" spellcheck="false" />
+          <button class="fr-opt" id="fr-regex-btn" title="Use Regular Expression" tabindex="-1">.*</button>
+          <button class="fr-opt" id="fr-case-btn" title="Match Case" tabindex="-1">Aa</button>
+          <button class="fr-opt" id="fr-word-btn" title="Match Whole Word" tabindex="-1">ab</button>
+        </div>
+        <span class="fr-count" id="fr-count"></span>
+        <button class="icon-btn icon-btn--icon-only icon-btn--sm" id="fr-prev" title="Previous (Shift+Enter)">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><path d="M4 10l4-4 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+        <button class="icon-btn icon-btn--icon-only icon-btn--sm" id="fr-next" title="Next (Enter)">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+        <button class="icon-btn icon-btn--icon-only icon-btn--sm" id="fr-close" title="Close (Escape)">
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="fr-row" id="fr-replace-row" style="display:none">
+        <div class="fr-input-wrap">
+          <input type="text" id="fr-replace" class="fr-input" placeholder="Replace…" autocomplete="off" spellcheck="false" />
+        </div>
+        <button class="btn fr-action-btn" id="fr-replace-one" title="Replace (Ctrl+Enter)">Replace</button>
+        <button class="btn fr-action-btn" id="fr-replace-all" title="Replace All">All</button>
+      </div>
+      <!-- Across files scope indicator -->
+      <div class="fr-scope" id="fr-scope" style="display:none">
+        <span id="fr-scope-label"></span>
+      </div>
+    </div>
+
+    <!-- FORMAT TOOLBAR -->
+    <div class="format-toolbar" id="format-toolbar" style="display:none">
+      <button class="fmt-btn" id="fmt-hex-btn" title="Insert Hex Color Code">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+          <circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.3" fill="none"/>
+          <path d="M8 4v4l3 1.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        </svg>
+        <span class="fmt-label">#hex</span>
+      </button>
+      <button class="fmt-btn" id="fmt-smallcaps-btn" title="Convert selection to Small Caps">
+        <span class="fmt-label">ᴀʙᴄ</span>
+      </button>
+      <div class="fmt-sep"></div>
+      <span class="fmt-hint">Use <code>&amp;r</code> to reset color · <code>&lt;#rrggbb&gt;</code> flows until reset</span>
+    </div>
+
+    <!-- HEX PICKER OVERLAY -->
+    <div class="hex-picker-overlay" id="hex-picker-overlay" style="display:none">
+      <div class="hex-picker-panel">
+        <div class="hex-picker-header">
+          <span>Insert Hex Color</span>
+          <button class="icon-btn icon-btn--icon-only icon-btn--sm" id="hex-picker-close">&#x2715;</button>
+        </div>
+        <div class="hex-picker-body">
+          <div class="hex-color-row">
+            <input type="color" id="hex-color-input" value="#55FFFF" class="hex-color-native" />
+            <div class="hex-preview-swatch" id="hex-preview-swatch" style="background:#55FFFF"></div>
+          </div>
+          <div class="hex-text-row">
+            <span class="hex-hash">#</span>
+            <input type="text" id="hex-text-input" value="55FFFF" maxlength="6" class="hex-text-field" spellcheck="false" autocomplete="off" />
+          </div>
+          <div class="hex-preview-text" id="hex-preview-text" style="color:#55FFFF">Preview Text</div>
+          <div class="hex-picker-formats">
+            <span class="hex-fmt-label">Format:</span>
+            <label class="hex-fmt-opt"><input type="radio" name="hex-fmt" value="inline" checked /> <code>&lt;#hex&gt;</code> inline flow</label>
+            <label class="hex-fmt-opt"><input type="radio" name="hex-fmt" value="paired" /> <code>&lt;#hex&gt;…&lt;/#hex&gt;</code> paired</label>
+          </div>
+          <div class="hex-presets">
+            <span class="hex-fmt-label">Presets:</span>
+            <div class="hex-preset-swatches" id="hex-preset-swatches"></div>
+          </div>
+        </div>
+        <div class="hex-picker-footer">
+          <button class="btn" id="hex-picker-cancel">Cancel</button>
+          <button class="btn btn--primary" id="hex-picker-insert">Insert</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- EDITOR CONTAINER -->
+    <div class="editor-container" id="editor-container">
+      <div class="editor-welcome" id="editor-welcome">
+        <div class="welcome-logo">
+          <span class="logo-r4t">R4T</span><span class="logo-editor">Editor</span>
+        </div>
+        <p class="welcome-sub">SkriptLang Development Environment</p>
+        <div class="welcome-actions">
+          <button class="welcome-action" id="wa-open-folder">
+            <svg width="17" height="17" viewBox="0 0 16 16" fill="none"><path d="M1 3a1 1 0 0 1 1-1h4l2 2h6a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V3z" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>
+            Open Folder
+          </button>
+          <button class="welcome-action" id="wa-new-file">
+            <svg width="17" height="17" viewBox="0 0 16 16" fill="none"><path d="M9 1H3a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V6L9 1z" stroke="currentColor" stroke-width="1.4" fill="none"/><path d="M9 1v5h5" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>
+            New File
+          </button>
+        </div>
+        <div class="welcome-shortcuts">
+          <div class="shortcut-row"><kbd>Ctrl+H</kbd><span>Find &amp; Replace (current file)</span></div>
+          <div class="shortcut-row"><kbd>Ctrl+N</kbd><span>Find &amp; Replace across open files</span></div>
+          <div class="shortcut-row"><kbd>Ctrl+M</kbd><span>Find &amp; Replace across all files &amp; folders</span></div>
+        </div>
+        <div class="welcome-version">Phase 1 &middot; v0.1.0</div>
+      </div>
+      <div id="cm-editor" style="display:none; height:100%;"></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- BOTTOM PANEL -->
+<div class="bottom-panel" id="bottom-panel">
+  <div class="bottom-panel-tabs">
+    <button class="panel-tab panel-tab--active" data-panel="diagnostics">Diagnostics</button>
+  </div>
+  <div class="bottom-panel-content" id="diagnostics-panel">
+    <div class="panel-empty">No diagnostics &mdash; looking good.</div>
+  </div>
+  <div class="bottom-panel-resize" id="bottom-resize"></div>
+</div>
+
+<!-- DEBUG CONSOLE (hidden by default) -->
+<div id="debug-panel-wrapper">
+  <div class="debug-header">
+    <span>Debug Console</span>
+    <button class="icon-btn icon-btn--icon-only icon-btn--sm" onclick="document.getElementById('debug-panel').innerHTML=''">Clear</button>
+  </div>
+  <div class="debug-panel" id="debug-panel"></div>
+</div>
+
+<!-- STATUS BAR -->
+<div class="statusbar">
+  <div class="statusbar-left"><span id="sb-skript-version">No environment loaded</span></div>
+  <div class="statusbar-right">
+    <span id="sb-cursor">Ln 1, Col 1</span>
+    <span id="sb-encoding">UTF-8</span>
+    <span id="sb-lang">SkriptLang</span>
+  </div>
+</div>
+
+<!-- SETTINGS PANEL -->
+<div class="overlay" id="settings-overlay" hidden>
+  <div class="settings-panel">
+    <div class="settings-header">
+      <h2>Settings</h2>
+      <button class="icon-btn icon-btn--icon-only" id="settings-close">&#x2715;</button>
+    </div>
+    <div class="settings-body">
+
+      <section class="settings-section">
+        <h3>Theme</h3>
+        <div class="setting-row">
+          <label>Color Theme</label>
+          <select id="theme-select" class="select-input"></select>
+        </div>
+        <div class="setting-row">
+          <label>Upload Theme</label>
+          <button class="btn btn--sm" id="theme-upload-btn">Upload .json / .yaml</button>
+          <input type="file" id="theme-upload-input" accept=".json,.yaml,.yml" style="display:none" />
+        </div>
+        <div class="setting-row setting-row--hint">
+          <span class="hint-text">Add custom themes to <code>~/.r4teditor/themes/</code> as <code>.json</code> or <code>.yaml</code> files, or upload one above.</span>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h3>Layout</h3>
+        <div class="setting-row">
+          <label>Sidebar Position</label>
+          <div class="segmented" id="sidebar-position-toggle">
+            <button class="seg-btn seg-btn--active" data-value="left">Left</button>
+            <button class="seg-btn" data-value="right">Right</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h3>Editor</h3>
+        <div class="setting-row">
+          <label>Font Family</label>
+          <input type="text" id="editor-font-input" class="text-input text-input--sm" placeholder="JetBrains Mono" />
+        </div>
+        <div class="setting-row">
+          <label>Font Size</label>
+          <input type="range" id="font-size-input" min="10" max="24" step="1" />
+          <span id="font-size-value">14px</span>
+        </div>
+        <div class="setting-row">
+          <label>Line Height</label>
+          <input type="range" id="line-height-input" min="1.2" max="2.0" step="0.1" />
+          <span id="line-height-value">1.6</span>
+        </div>
+        <div class="setting-row">
+          <label>Tab Width</label>
+          <div class="segmented" id="tab-width-toggle">
+            <button class="seg-btn" data-value="2">2</button>
+            <button class="seg-btn seg-btn--active" data-value="4">4</button>
+            <button class="seg-btn" data-value="8">8</button>
+          </div>
+        </div>
+        <div class="setting-row">
+          <label>Autocomplete</label>
+          <label class="toggle"><input type="checkbox" id="autocomplete-toggle" checked /><span class="toggle-slider"></span></label>
+        </div>
+        <div class="setting-row">
+          <label>Indent Guides</label>
+          <label class="toggle"><input type="checkbox" id="indent-guides-toggle" checked /><span class="toggle-slider"></span></label>
+        </div>
+        <div class="setting-row">
+          <label>Minimap</label>
+          <label class="toggle"><input type="checkbox" id="minimap-toggle" /><span class="toggle-slider"></span></label>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h3>Files</h3>
+        <div class="setting-row">
+          <label>Upload on Save <small style="opacity:.5">(SFTP)</small></label>
+          <label class="toggle"><input type="checkbox" id="upload-on-save-toggle" /><span class="toggle-slider"></span></label>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h3>Script Header Template</h3>
+        <div class="setting-row">
+          <label>Enable Header</label>
+          <label class="toggle"><input type="checkbox" id="header-enable-toggle" /><span class="toggle-slider"></span></label>
+        </div>
+        <div class="setting-row setting-row--hint">
+          <span class="hint-text">This text is prepended to every new <code>.sk</code> script you create. Each line is treated as a comment (prefixed with <code>#</code> automatically if not already).</span>
+        </div>
+        <div class="header-editor-wrap" id="header-editor-wrap">
+          <textarea
+            id="header-template-input"
+            class="header-template-textarea"
+            placeholder="# My script header&#10;# Created by you"
+            rows="10"
+            spellcheck="false"
+          ></textarea>
+          <div class="header-preview-label">Preview</div>
+          <pre class="header-preview" id="header-preview"></pre>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h3>Theme File Format</h3>
+        <div class="setting-row setting-row--hint">
+          <span class="hint-text">
+            Themes are JSON or YAML files. Key fields:<br>
+            <code>syntax.keyword.color</code>, <code>syntax.keyword.bold</code>, <code>syntax.comment.italic</code><br>
+            Token types: <code>keyword</code>, <code>event</code>, <code>effect</code>, <code>expression</code>,
+            <code>variable</code>, <code>comment</code>, <code>string</code>, <code>number</code>,
+            <code>type</code>, <code>operator</code>, <code>formatCode</code>
+          </span>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<!-- SFTP Add/Edit Site Dialog -->
+<div class="overlay" id="sftp-site-overlay" hidden>
+  <div class="dialog dialog--sftp">
+    <h3 id="sftp-site-dialog-title">Add SFTP Site</h3>
+    <div class="dialog-form">
+      <label>Name</label>
+      <input type="text" id="sftp-site-name" placeholder="My Server" class="text-input" />
+      <label>Host</label>
+      <input type="text" id="sftp-site-host" placeholder="192.168.1.1" class="text-input" />
+      <label>Port</label>
+      <input type="number" id="sftp-site-port" value="22" class="text-input" style="width:80px"/>
+      <label>Username</label>
+      <input type="text" id="sftp-site-user" placeholder="root" class="text-input" />
+      <label>Password</label>
+      <input type="password" id="sftp-site-pass" placeholder="(leave blank for key auth)" class="text-input" />
+      <label>Save Password</label>
+      <label class="toggle"><input type="checkbox" id="sftp-site-savepass" /><span class="toggle-slider"></span></label>
+      <label>Private Key <small style="opacity:.5">(optional)</small></label>
+      <input type="text" id="sftp-site-key" placeholder="~/.ssh/id_rsa" class="text-input" />
+    </div>
+    <div class="dialog-actions">
+      <button class="btn" id="sftp-site-delete" style="margin-right:auto;color:#ef4444;display:none">Delete</button>
+      <button class="btn" id="sftp-site-cancel">Cancel</button>
+      <button class="btn btn--primary" id="sftp-site-save">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- File name dialog -->
+<div class="overlay" id="filename-overlay" hidden>
+  <div class="dialog">
+    <h3>File Name</h3>
+    <input type="text" id="filename-input" placeholder="script.sk" class="text-input" />
+    <div class="dialog-actions">
+      <button class="btn" id="filename-cancel">Cancel</button>
+      <button class="btn btn--primary" id="filename-confirm">OK</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="/static/js/editor.js"></script>
+<script type="module" src="/static/js/app.js"></script>
+</body>
+</html>
