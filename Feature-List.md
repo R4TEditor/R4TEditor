@@ -28,6 +28,7 @@
 - [ ] Misc and UI
     - [X] Switch between built-in themes
     - [X] Upload custom theme files
+    - [ ] Custom Theme file editor
     - [X] Adjustable font family and size
     - [X] Adjustable line height and tab width
     - [X] Toggle autocomplete
