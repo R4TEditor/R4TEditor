@@ -1566,7 +1566,7 @@ function renderDiagnosticsPanel(diags, view) {
   if (!panel) return;
 
   if (!diags?.length) {
-    panel.innerHTML = `<div class="panel-empty">No diagnostics &mdash; looking good.</div>`;
+    panel.innerHTML = `<div class="panel-empty">No diagnostics, looking good.</div>`;
     _setDiagBadge(0, 0);
     return;
   }
@@ -1838,11 +1838,16 @@ async function init() {
   // Apply the saved theme
   await applyThemeById(state.settings.theme_id || "royal-purple-dark");
 
-  // Show local server connection status
+  // Show local server connection status and inject build version
   try {
-    await api("GET", "/api/status");
+    const status = await api("GET", "/api/status");
     $q(".status-dot:not(.status-dot--internet)").className = "status-dot";
     $q(".status-label:not(#internet-label)").textContent = "Local";
+    // Propagate version to every element that carries [data-version]
+    const ver = status.version ?? "";
+    document.querySelectorAll("[data-version]").forEach(el => {
+      el.textContent = `v${ver}`;
+    });
   } catch {
     $q(".status-dot:not(.status-dot--internet)").className = "status-dot offline";
     $q(".status-label:not(#internet-label)").textContent = "Offline";

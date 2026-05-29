@@ -100,7 +100,7 @@ export function applyThemeToDOM(theme) {
     if (val && val.startsWith('#')) {
       r.style.setProperty(key, val);
     } else {
-      // null/undefined — remove so the plugin knows it's a format modifier, not a color
+      // null/undefined, remove so the plugin knows it's a format modifier, not a color
       r.style.removeProperty(key);
     }
   }
@@ -465,7 +465,7 @@ export function buildMinimapPlugin() {
 }
 
 // ============================================================
-// Format modifier map — &l bold, &o italic, &n underline, &m strikethrough,
+// Format modifier map, &l bold, &o italic, &n underline, &m strikethrough,
 // &k obfuscated, &r reset. These are parsed from the theme's skript_colors
 // but also hardcoded as fallback since themes may set them to null.
 // ============================================================
@@ -475,7 +475,7 @@ const FORMAT_MODIFIER_STYLES = {
   '&n': 'text-decoration:underline',
   '&m': 'text-decoration:line-through',
   '&k': 'opacity:0.4;letter-spacing:2px', // obfuscated approximation
-  '&r': '',  // reset — handled by stopping current run
+  '&r': '',  // reset, handled by stopping current run
 };
 
 // ============================================================
@@ -511,7 +511,7 @@ const RAINBOW_COLORS = ['#FF5555','#FFAA00','#FFFF55','#55FF55','#55FFFF','#5555
 
 /**
  * Parse MiniMessage tags in a line of text and return an array of decoration spans.
- * Each entry: { from, to, style } — indices are within `text`.
+ * Each entry: { from, to, style }, indices are within `text`.
  */
 function parseMiniMessageDecorations(text) {
   const decos = [];
@@ -553,7 +553,7 @@ function parseMiniMessageDecorations(text) {
         decos.push({ from: tagStart, to: tagEnd, style: 'color:var(--syn-formatCode);opacity:0.6;font-weight:bold' });
         opens.splice(openIdx, 1);
       } else {
-        // Unknown close — just dim the tag
+        // Unknown close, just dim the tag
         decos.push({ from: tagStart, to: tagEnd, style: 'color:var(--syn-formatCode);opacity:0.5' });
       }
       continue;
@@ -572,13 +572,13 @@ function parseMiniMessageDecorations(text) {
     }
 
     if (name === 'reset') {
-      // Close all active opens — just mark the tag
+      // Close all active opens, just mark the tag
       opens.length = 0;
       decos.push({ from: tagStart, to: tagEnd, style: 'color:var(--syn-formatCode);opacity:0.75' });
       continue;
     }
 
-    // click:, hover:, key:, font:, etc. — structural/non-visual tags, just dim them
+    // click:, hover:, key:, font:, etc. structural/non-visual tags, just dim them
     if (['click','hover','insertion','font','lang','translate','selector','score','nbt','keybind'].includes(name)) {
       decos.push({ from: tagStart, to: tagEnd, style: 'color:var(--syn-formatCode);opacity:0.5;font-style:italic' });
       continue;
@@ -600,7 +600,7 @@ function parseMiniMessageDecorations(text) {
     if (color || fmtStyle) {
       opens.push({ tagStart, tagEnd, color, style: fmtStyle, name });
     } else {
-      // Unknown tag — dim it
+      // Unknown tag, dim it
       decos.push({ from: tagStart, to: tagEnd, style: 'color:var(--syn-formatCode);opacity:0.4' });
     }
   }
@@ -620,7 +620,7 @@ function parseMiniMessageDecorations(text) {
 }
 
 /**
- * Parse inline <#RRGGBB> hex codes (without closing tag) — colors text after the tag
+ * Parse inline <#RRGGBB> hex codes (without closing tag), colors text after the tag
  * until &r, another color code, or end of line.
  * Returns array of { from, to, style }.
  */
@@ -643,7 +643,7 @@ function findSkriptStringClose(text, insideIdx) {
   while (i < text.length) {
     const ch = text[i];
     if (ch === '%') {
-      // Skip %expression% — these don't close the string
+      // Skip %expression%, these don't close the string
       i++;
       while (i < text.length && text[i] !== '%') i++;
       if (i < text.length) i++; // skip closing %
@@ -668,7 +668,7 @@ function parseInlineHexDecorations(text) {
     const tagStart = m.index;
     const tagEnd   = m.index + m[0].length;
 
-    // Find where the enclosing Skript string closes — hex must not bleed past it
+    // Find where the enclosing Skript string closes, hex must not bleed past it
     const strClose = findSkriptStringClose(text, tagStart);
 
     // Check for a matching explicit closing tag within the string
@@ -678,7 +678,7 @@ function parseInlineHexDecorations(text) {
     const closeInStr = closeMatch && closeMatch.index < strClose ? closeMatch : null;
 
     if (closeInStr) {
-      // Paired <#hex>…</#hex> — style tag, content, close tag
+      // Paired <#hex>…</#hex>, style tag, content, close tag
       decos.push({ from: tagStart, to: tagEnd,   style: `color:${color};font-weight:bold;opacity:0.75` });
       if (closeInStr.index > tagEnd)
         decos.push({ from: tagEnd, to: closeInStr.index, style: `color:${color}` });
@@ -740,7 +740,7 @@ export function buildColorCodePlugin(skriptColors = {}) {
             const line    = doc.line(ln);
             const text    = line.text;
             const lineOff = line.from;
-            const raw = []; // { from, to, style } — all in line-local coords
+            const raw = []; // { from, to, style }, all in line-local coords
 
             // ── Pass 1: &X amp codes ──────────────────────────────────────
             AMP_CODE_RE.lastIndex = 0;
@@ -854,7 +854,7 @@ export function buildColorCodePlugin(skriptColors = {}) {
               try {
                 builder.add(clippedFrom, absTo, Decoration.mark({ attributes: { style: d.style } }));
                 if (absTo > watermark) watermark = absTo;
-              } catch { /* safety net — should not be needed after clipping */ }
+              } catch { /* safety net, should not be needed after clipping */ }
             }
           }
         }
@@ -924,7 +924,7 @@ function buildHoverTooltip() {
           dom.appendChild(pat);
         }
 
-        // Doc link — anchor is just the id (e.g. docs.html#ExprFunction, docs.html#Function)
+        // Doc link, anchor is just the id (e.g. docs.html#ExprFunction, docs.html#Function)
         const docBase = "https://docs.skriptlang.org/docs.html";
         if (hit.id) {
           const link = document.createElement("a");
@@ -1156,7 +1156,7 @@ function skriptAutocomplete(context) {
 }
 
 // ============================================================
-// Default theme (Royal Purple — used before settings load)
+// Default theme (Royal Purple, used before settings load)
 // ============================================================
 const DEFAULT_THEME = {
   syntax: {

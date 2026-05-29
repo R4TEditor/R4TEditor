@@ -6,13 +6,13 @@
  * Rules:
  *  - Lines ending with  #! ignore  (case-insensitive) are skipped entirely.
  *  - Blank lines, pure comments (#), section headers (ending with :), and
- *    option/variable declarations are skipped — we can't reliably validate them.
+ *    option/variable declarations are skipped we can't reliably validate them.
  *  - If syntaxDB isn't ready yet, the linter returns nothing (silent until ready).
  *  - A line is only flagged when we have high confidence it SHOULD match something
- *    but doesn't — i.e. the first word is a known leading word in the DB for
+ *    but doesn't i.e. the first word is a known leading word in the DB for
  *    effects/conditions/events, but no pattern fully matches the line.
  *  - If the first word is completely unknown to the DB, we stay silent
- *    (could be an addon, could be user prose — we don't know).
+ *    (could be an addon, could be user prose, we don't know).
  */
 
 import { linter } from "https://esm.sh/@codemirror/lint@6";
@@ -71,7 +71,7 @@ function firstWord(stripped) {
 
 /**
  * Returns true if any entry in syntaxDB for `word` belongs to one of the
- * given categories — meaning we have pattern knowledge for this word.
+ * given categories, meaning we have pattern knowledge for this word.
  */
 function knownLeadWord(word, ...categories) {
   const entries = syntaxDB._byWord.get(word) || [];
@@ -87,7 +87,7 @@ function knownLeadWord(word, ...categories) {
  */
 export function buildAnalyzer() {
   return linter((view) => {
-    // Stay silent until the DB is loaded — no false positives during startup.
+    // Stay silent until the DB is loaded, no false positives during startup.
     if (!syntaxDB.ready) return [];
 
     const diagnostics = [];
@@ -128,7 +128,7 @@ export function buildAnalyzer() {
       if (hit) {
         // Line matched a known pattern.
         if (hit.deprecated) {
-          // Warn about deprecated syntax — yellow underline.
+          // Warn about deprecated syntax, yellow underline.
           diagnostics.push({
             from:     line.from,
             to:       line.to,
@@ -136,13 +136,13 @@ export function buildAnalyzer() {
             message:  `Deprecated syntax: "${hit.name}". Check the Skript docs for the current alternative.`,
           });
         }
-        // Otherwise: valid — no diagnostic.
+        // Otherwise: valid, no diagnostic.
         continue;
       }
 
       //No pattern matched: flag as an error
       // We know the first word is a real Skript keyword, but nothing in the
-      // DB matched the full line — likely a syntax mistake.
+      // DB matched the full line, likely a syntax mistake.
       diagnostics.push({
         from:     line.from,
         to:       line.to,

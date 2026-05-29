@@ -1,7 +1,6 @@
-"""
-R4TEditor - Local FastAPI backend
-Phase 1: Core Editor
-"""
+# Global version =====
+APP_VERSION = "0.1.1"
+# ====================
 
 import os
 import sys
@@ -13,7 +12,6 @@ import zipfile
 import io
 from pathlib import Path
 from typing import Optional
-
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, UploadFile, File
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
@@ -22,13 +20,7 @@ from pydantic import BaseModel
 import uvicorn
 import httpx
 
-# ----------------------------------------------------------------- Log broker
-# Collects log records from Python's logging system + raw stdout/stderr writes
-# and fans them out to all connected /ws/logs WebSocket clients.
-
 class _LogBroker:
-    """Thread-safe log message broker for WebSocket streaming."""
-
     def __init__(self):
         self._clients: list[asyncio.Queue] = []
         self._loop: asyncio.AbstractEventLoop | None = None
@@ -53,10 +45,9 @@ class _LogBroker:
         payload = json.dumps({"level": level, "msg": message})
         for q in list(self._clients):
             try:
-                # put_nowait is safe to call from any thread
                 q.put_nowait(payload)
             except asyncio.QueueFull:
-                pass  # slow client — drop rather than block
+                pass
 
     def publish_threadsafe(self, level: str, message: str):
         """Call this from non-async threads (e.g. the uvicorn worker threads)."""
@@ -64,13 +55,9 @@ class _LogBroker:
             return
         self._loop.call_soon_threadsafe(self.publish, level, message)
 
-
 log_broker = _LogBroker()
 
-
 class _WSLogHandler(logging.Handler):
-    """Logging handler that forwards records to the log broker."""
-
     def emit(self, record: logging.LogRecord):
         level = record.levelname  # DEBUG / INFO / WARNING / ERROR / CRITICAL
         msg = self.format(record)
@@ -78,8 +65,6 @@ class _WSLogHandler(logging.Handler):
 
 
 class _StreamCapture:
-    """Wraps sys.stdout or sys.stderr to also forward writes to the broker."""
-
     def __init__(self, original, level: str):
         self._original = original
         self._level = level
@@ -87,26 +72,31 @@ class _StreamCapture:
 
     # ---- stream interface ----
     def write(self, text: str):
-        self._original.write(text)
+        if self._original is not None:
+            self._original.write(text)
         self._buf += text
-        # Flush complete lines to the broker
         while "\n" in self._buf:
             line, self._buf = self._buf.split("\n", 1)
             if line:
                 log_broker.publish_threadsafe(self._level, line)
 
     def flush(self):
-        self._original.flush()
+        if self._original is not None:
+            self._original.flush()
         if self._buf:
             log_broker.publish_threadsafe(self._level, self._buf)
             self._buf = ""
 
     def __getattr__(self, name):
-        return getattr(self._original, name)
+        if self._original is not None:
+            return getattr(self._original, name)
+        _SAFE_DEFAULTS = {"isatty": lambda: False, "fileno": lambda: -1, "readable": lambda: False, "writable": lambda: True, "closed": False}
+        if name in _SAFE_DEFAULTS:
+            return _SAFE_DEFAULTS[name]
+        raise AttributeError(name)
 
 
 def _install_log_capture():
-    """Install the WS log handler on the root logger and wrap stdout/stderr."""
     handler = _WSLogHandler()
     handler.setFormatter(logging.Formatter("%(name)s: %(message)s"))
     handler.setLevel(logging.DEBUG)
@@ -127,11 +117,10 @@ from contextlib import asynccontextmanager
 
 @asynccontextmanager
 async def _lifespan(application: FastAPI):
-    """Capture the running event loop for the log broker on startup."""
     log_broker.set_loop(asyncio.get_running_loop())
     yield
 
-app = FastAPI(title="R4TEditor", version="0.1.0", lifespan=_lifespan)
+app = FastAPI(title="R4TEditor", version=APP_VERSION, lifespan=_lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -148,7 +137,7 @@ ROOT_DIR   = _BASE
 FRONTEND   = _BASE / "frontend"
 THEMES_DIR = _BASE / "themes"
 
-# ---------------------------------------------------------------- Syntax Cache
+# --- Syntax Cache
 
 SYNTAX_CACHE_DIR = Path.home() / ".r4teditor" / "syntax_cache"
 SYNTAX_CACHE_DIR.mkdir(parents=True, exist_ok=True)
@@ -192,7 +181,7 @@ async def _fetch_and_cache(url: str, cache_name: str) -> Optional[dict | list]:
 
 app.mount("/static", StaticFiles(directory=str(FRONTEND / "static")), name="static")
 
-# ------------------------------------------------------------------ Settings --
+# --- Settings
 
 SETTINGS_FILE = Path.home() / ".r4teditor" / "settings.json"
 SETTINGS_FILE.parent.mkdir(parents=True, exist_ok=True)
@@ -201,22 +190,16 @@ USER_THEMES_DIR = Path.home() / ".r4teditor" / "themes"
 USER_THEMES_DIR.mkdir(parents=True, exist_ok=True)
 
 DEFAULT_SETTINGS = {
-    # Theme
     "theme_id":             "royal-purple-dark",
-    # Editor appearance
     "editor_font":          "JetBrains Mono",
     "editor_font_size":     14,
     "line_height":          1.6,
-    # Editor behaviour
     "tab_width":            4,
     "autocomplete":         True,
     "indent_guides":        True,
     "minimap":              False,
-    # Layout
     "sidebar_position":     "left",
-    # SFTP
     "upload_on_save":       False,
-    # Script header template
     "header_enabled":       False,
     "header_template":      "",
 }
@@ -235,7 +218,7 @@ def save_settings(settings: dict):
     with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
         json.dump(settings, f, indent=2)
 
-# -------------------------------------------------------------------- Models --
+# --- Models
 
 class FileReadRequest(BaseModel):
     path: str
@@ -257,7 +240,7 @@ class DirectoryRequest(BaseModel):
 class ThemeSaveRequest(BaseModel):
     theme: dict
 
-# ---------------------------------------------------------------- SFTP Models --
+# --- SFTP Models
 
 class SFTPConnectRequest(BaseModel):
     host: str
@@ -282,7 +265,7 @@ class SFTPListRequest(BaseModel):
 class SFTPDisconnectRequest(BaseModel):
     session_id: str
 
-# -------------------------------------------------------------------- Routes --
+# --- Routes
 
 @app.get("/", response_class=HTMLResponse)
 async def root():
@@ -291,9 +274,9 @@ async def root():
 
 @app.get("/api/status")
 async def status():
-    return {"status": "running", "version": "0.1.0", "phase": 1}
+    return {"status": "running", "version": APP_VERSION}
 
-# -- Settings --
+# --- Settings
 
 @app.get("/api/settings")
 async def get_settings():
@@ -306,7 +289,7 @@ async def update_settings(req: SettingsUpdateRequest):
     save_settings(settings)
     return {"ok": True, "settings": settings}
 
-# -- File ops --
+# --- File ops
 
 @app.post("/api/file/read")
 async def read_file(req: FileReadRequest):
@@ -455,7 +438,6 @@ async def save_theme(theme_id: str, req: ThemeSaveRequest):
     path.write_text(json.dumps(theme, indent=2), encoding="utf-8")
     return {"ok": True, "path": str(path)}
 
-
 @app.post("/api/themes/upload")
 async def upload_theme(file: UploadFile = File(...)):
     """Accept a JSON or YAML theme file upload and save it to the user themes directory."""
@@ -463,9 +445,7 @@ async def upload_theme(file: UploadFile = File(...)):
     suffix = Path(filename).suffix.lower()
     if suffix not in (".json", ".yaml", ".yml"):
         raise HTTPException(400, "Theme files must be .json or .yaml/.yml")
-
     raw = await file.read()
-
     if suffix == ".json":
         try:
             theme = json.loads(raw)
@@ -477,10 +457,8 @@ async def upload_theme(file: UploadFile = File(...)):
             theme = yaml.safe_load(raw)
         except Exception as e:
             raise HTTPException(400, f"Invalid YAML: {e}")
-
     if not isinstance(theme, dict):
         raise HTTPException(400, "Theme file must be a JSON/YAML object")
-
     theme_id = theme.get("id") or Path(filename).stem
     theme["id"] = theme_id
     out_path = USER_THEMES_DIR / (theme_id + ".json")
@@ -488,10 +466,9 @@ async def upload_theme(file: UploadFile = File(...)):
     return {"ok": True, "id": theme_id, "name": theme.get("name", theme_id)}
 
 
-# ----------------------------------------------------------------- Environment Scanning
+# --- Environment Scanning
 
 def _extract_plugin_yml(jar_path: Path) -> Optional[dict]:
-    """Read plugin.yml from a jar (zip) without extracting the whole file."""
     try:
         import yaml  # type: ignore
         with zipfile.ZipFile(jar_path, "r") as zf:
@@ -507,49 +484,32 @@ def _extract_plugin_yml(jar_path: Path) -> Optional[dict]:
         pass
     return None
 
-
 def _classify_plugin(meta: dict) -> str:
-    """Return 'skript', 'addon', or 'plugin' for a parsed plugin.yml."""
     name = (meta.get("name") or "").lower()
     depend = [d.lower() for d in (meta.get("depend") or [])]
     soft_depend = [d.lower() for d in (meta.get("softdepend") or [])]
     all_deps = depend + soft_depend
-
-    # Skript itself: name contains "skript" and has no dependency on skript
     if "skript" in name and "skript" not in all_deps:
         return "skript"
-    # Addon: depends or soft-depends on Skript
     if "skript" in all_deps:
         return "addon"
     return "plugin"
 
-
 @app.post("/api/environment/scan")
 async def scan_environment(req: DirectoryRequest):
-    """
-    Scan a local plugins folder, extract plugin.yml from each jar,
-    detect Skript and addons, then compare the Skript version against
-    the latest version in docs.json.
-    """
     base = Path(req.path)
-
-    # Auto-locate a plugins/ subfolder if the user passed a project root
     if (base / "plugins").is_dir():
         plugins_dir = base / "plugins"
     else:
         plugins_dir = base
-
     if not plugins_dir.is_dir():
         raise HTTPException(404, f"Directory not found: {plugins_dir}")
-
     jar_files = list(plugins_dir.glob("*.jar"))
     if not jar_files:
         return {"skript": None, "addons": [], "plugins": [], "warning": None, "docs_version": None}
-
     skript_entry = None
     addons = []
     others = []
-
     for jar in sorted(jar_files, key=lambda j: j.name.lower()):
         meta = _extract_plugin_yml(jar)
         if not meta:
@@ -567,8 +527,6 @@ async def scan_environment(req: DirectoryRequest):
             addons.append(entry)
         else:
             others.append(entry)
-
-    # Compare installed Skript version against the docs.json source version
     warning = None
     docs_version = None
     try:
@@ -594,8 +552,7 @@ async def scan_environment(req: DirectoryRequest):
         "warning":      warning,
     }
 
-
-# ----------------------------------------------------------------- Syntax API
+# --- Syntax API
 
 @app.get("/api/syntax/docs")
 async def get_syntax_docs():
@@ -633,9 +590,8 @@ async def get_syntax_status():
         },
     }
 
-# ------------------------------------------------------------------- SFTP API
+# --- SFTP API
 
-# In-memory SFTP session store
 _sftp_sessions: dict = {}
 
 @app.post("/api/sftp/connect")
@@ -643,12 +599,9 @@ async def sftp_connect(req: SFTPConnectRequest):
     try:
         import paramiko
         import uuid
-
         transport = paramiko.Transport((req.host, req.port))
-
         if req.key_path:
             key_path = Path(req.key_path).expanduser()
-            # Try common key types
             pkey = None
             for key_class in [paramiko.RSAKey, paramiko.Ed25519Key, paramiko.ECDSAKey, paramiko.DSSKey]:
                 try:
@@ -675,7 +628,7 @@ async def sftp_connect(req: SFTPConnectRequest):
         raise HTTPException(500, f"SSH error: {e}")
     except Exception as e:
         raise HTTPException(500, str(e))
-
+    
 @app.post("/api/sftp/list")
 async def sftp_list(req: SFTPListRequest):
     session = _sftp_sessions.get(req.session_id)
@@ -701,7 +654,7 @@ async def sftp_list(req: SFTPListRequest):
         return {"path": req.path, "entries": entries}
     except Exception as e:
         raise HTTPException(500, str(e))
-
+    
 @app.post("/api/sftp/read")
 async def sftp_read(req: SFTPReadRequest):
     session = _sftp_sessions.get(req.session_id)
@@ -716,7 +669,7 @@ async def sftp_read(req: SFTPReadRequest):
         raise HTTPException(400, "File is not valid UTF-8 text")
     except Exception as e:
         raise HTTPException(500, str(e))
-
+    
 @app.post("/api/sftp/write")
 async def sftp_write(req: SFTPWriteRequest):
     session = _sftp_sessions.get(req.session_id)
@@ -729,7 +682,7 @@ async def sftp_write(req: SFTPWriteRequest):
         return {"ok": True, "path": req.path}
     except Exception as e:
         raise HTTPException(500, str(e))
-
+    
 @app.post("/api/sftp/disconnect")
 async def sftp_disconnect(req: SFTPDisconnectRequest):
     session = _sftp_sessions.pop(req.session_id, None)
@@ -740,7 +693,6 @@ async def sftp_disconnect(req: SFTPDisconnectRequest):
         except Exception:
             pass
     return {"ok": True}
-
 @app.get("/api/sftp/sessions")
 async def sftp_sessions():
     return {
@@ -750,7 +702,7 @@ async def sftp_sessions():
         ]
     }
 
-# -- WebSocket diagnostics stub --
+# --- WebSocket diagnostics stub
 
 @app.websocket("/ws/diagnostics")
 async def diagnostics_ws(websocket: WebSocket):
@@ -766,7 +718,7 @@ async def diagnostics_ws(websocket: WebSocket):
     except WebSocketDisconnect:
         pass
 
-# -- WebSocket log streaming --
+# --- WebSocket log streaming
 
 @app.websocket("/ws/logs")
 async def logs_ws(websocket: WebSocket):
@@ -782,7 +734,7 @@ async def logs_ws(websocket: WebSocket):
     finally:
         log_broker.unsubscribe(q)
 
-# ----------------------------------------------------------------- Entry point
+# --- Entry point
 
 def _wait_for_server(host: str, port: int, timeout: float = 10.0) -> bool:
     """Poll until the server is accepting connections or timeout expires."""
@@ -796,27 +748,19 @@ def _wait_for_server(host: str, port: int, timeout: float = 10.0) -> bool:
         except OSError:
             time.sleep(0.1)
     return False
-
-
 if __name__ == "__main__":
     HOST = "127.0.0.1"
     PORT = 7842
-
     try:
         import webview
         import threading
-
         def start_server():
             uvicorn.run(app, host=HOST, port=PORT, log_level="warning")
-
         server_thread = threading.Thread(target=start_server, daemon=True)
         server_thread.start()
-
-        # Wait until the server is actually ready (instead of a blind sleep)
         if not _wait_for_server(HOST, PORT):
             print("[R4TEditor] Server did not start in time — falling back to browser")
             raise ImportError("server timeout")  # jump to browser fallback
-
         window = webview.create_window(
             "R4TEditor",
             f"http://{HOST}:{PORT}",
@@ -825,18 +769,13 @@ if __name__ == "__main__":
             resizable=True,
             min_size=(900, 600),
         )
-        # webview.start() must be called on the main thread
         _ICON = str(_BASE / "frontend" / "static" / "favicon.ico")
         webview.start(icon=_ICON)
-
     except ImportError:
-        # pywebview not installed or server failed — fall back to system browser
         import webbrowser
         import threading
-
         def open_browser():
             if _wait_for_server(HOST, PORT):
                 webbrowser.open(f"http://{HOST}:{PORT}")
-
         threading.Thread(target=open_browser, daemon=True).start()
         uvicorn.run(app, host=HOST, port=PORT, log_level="info")

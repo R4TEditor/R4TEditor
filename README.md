@@ -9,7 +9,7 @@
 [![Stars](https://img.shields.io/github/stars/R4TEditor/R4TEditor?style=for-the-badge&logo=github)](https://github.com/R4TEditor/R4TEditor/stargazers)
 [![Downloads](https://img.shields.io/github/downloads/R4TEditor/R4TEditor/latest/total?style=for-the-badge&logo=github)](https://github.com/R4TEditor/R4TEditor/releases/)
 
-A brand new SkriptLang editor, meant to replace popular options (skeditor, vscode, etc),
+> A brand new SkriptLang editor, meant to replace popular options (skeditor, vscode, etc),
 its mostly lightweight and runs on python.
 If you find any issues, please report them [here](https://github.com/R4TEditor/R4TEditor/issues)
 

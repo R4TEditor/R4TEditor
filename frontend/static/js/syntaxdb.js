@@ -33,7 +33,7 @@ function bundleSpaces(s) {
   while (changed) {
     changed = false;
 
-    // Rule A — space BEFORE optional (anywhere in the string except start)
+    // Rule A, space BEFORE optional (anywhere in the string except start)
     const newA = s.replace(
       / (\(\?:([^()]*(?:\([^()]*\)[^()]*)*)\)\?)/g,
       (_, grp, inner) => {
@@ -43,7 +43,7 @@ function bundleSpaces(s) {
     );
     if (newA !== s) { s = newA; changed = true; continue; }
 
-    // Rule B — space AFTER optional at start of string
+    // Rule B, space AFTER optional at start of string
     const newB = s.replace(
       /^(\(\?:([^()]*(?:\([^()]*\)[^()]*)*)\)\?) /,
       (_, grp, inner) => {
@@ -264,7 +264,7 @@ async function _doInit({ onProgress = () => {} } = {}) {
     syntaxDB.ingestDocsJson(docsData);
     onProgress(`Loaded Skript ${syntaxDB.version || ''} syntax`);
   } else {
-    onProgress('Syntax DB offline — using built-in rules');
+    onProgress('Syntax DB offline, using built-in rules');
   }
 
   // SkriptHub addons (best-effort)
