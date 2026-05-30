@@ -3,8 +3,14 @@ echo [R4TEditor] Installing dependencies...
 
 pushd "%~dp0..\.."
 
-where python >nul 2>&1 || (
-    echo [R4TEditor] ERROR: Python not found. Install from https://python.org
+where py >nul 2>&1 || (
+    echo [R4TEditor] ERROR: Python Launcher ^(py.exe^) not found. Install Python 3.12 from https://python.org
+    pause
+    exit /b 1
+)
+
+py -3.12 --version >nul 2>&1 || (
+    echo [R4TEditor] ERROR: Python 3.12 is required but was not found. Install from https://python.org
     pause
     exit /b 1
 )
@@ -13,7 +19,7 @@ set VENV_DIR=%~dp0..\.venv
 
 if not exist "%VENV_DIR%" (
     echo [R4TEditor] Creating virtual environment at tools\.venv ...
-    python -m venv "%VENV_DIR%" || (
+    py -3.12 -m venv "%VENV_DIR%" || (
         echo [R4TEditor] ERROR: Failed to create virtual environment.
         pause
         exit /b 1

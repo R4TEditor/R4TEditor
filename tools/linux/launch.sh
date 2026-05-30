@@ -15,16 +15,16 @@ error()   { echo -e "${RED}[R4TEditor] ERROR:${NC} $*"; exit 1; }
 
 # --- Python check
 PYTHON=""
-for cmd in python3 python; do
+for cmd in python3.12 python3 python; do
     if command -v "$cmd" &>/dev/null; then
-        VER=$("$cmd" -c "import sys; print(sys.version_info >= (3,10))" 2>/dev/null)
+        VER=$("$cmd" -c "import sys; v=sys.version_info; print(v.major==3 and v.minor==12)" 2>/dev/null)
         if [ "$VER" = "True" ]; then
             PYTHON="$cmd"
             break
         fi
     fi
 done
-[ -z "$PYTHON" ] && error "Python 3.10+ is required but was not found.\nInstall it with: sudo apt install python3  (Debian/Ubuntu) or equivalent."
+[ -z "$PYTHON" ] && error "Python 3.12 is required but was not found.\nInstall it with: sudo apt install python3.12 python3.12-venv  (Debian/Ubuntu) or equivalent."
 
 info "Using $($PYTHON --version)"
 

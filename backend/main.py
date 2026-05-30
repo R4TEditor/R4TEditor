@@ -143,7 +143,10 @@ def _install_log_capture():
 _install_log_capture()
 logging.info(f"R4TEditor {APP_VERSION} starting up")
 
-from backend.updater import check_and_update
+try:
+    from backend.updater import check_and_update
+except ModuleNotFoundError:
+    from updater import check_and_update
 check_and_update(APP_VERSION)
 
 from contextlib import asynccontextmanager
@@ -1035,10 +1038,16 @@ async def update_check():
     Useful for surfacing an 'update available' notice in the UI.
     """
     import hashlib as _hashlib
-    from backend.updater import (
-        _fetch_latest_release, _find_asset, _parse_digest,
-        _hash_file, _current_exe, _is_frozen, EXE_ASSET_NAME
-    )
+    try:
+        from backend.updater import (
+            _fetch_latest_release, _find_asset, _parse_digest,
+            _hash_file, _current_exe, _is_frozen, EXE_ASSET_NAME
+        )
+    except ModuleNotFoundError:
+        from updater import (
+            _fetch_latest_release, _find_asset, _parse_digest,
+            _hash_file, _current_exe, _is_frozen, EXE_ASSET_NAME
+        )
     try:
         release = await asyncio.get_event_loop().run_in_executor(None, _fetch_latest_release)
     except Exception as e:

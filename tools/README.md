@@ -2,7 +2,7 @@ R4TEditor - Tools
 =================
 
 This directory contains scripts to install, run, and build R4TEditor.
-If you're not sure where to start, run setup — it will ask you what you
+If you're not sure where to start, run setup, it will ask you what you
 want to do and handle everything else for you.
 
     Linux:    bash tools/linux/setup.sh
@@ -79,12 +79,12 @@ you like at any time.
 
 Requirements
 ------------
-Python 3.10 or newer is required. Everything else is installed
+Python 3.12 is required. Everything else is installed
 automatically into a local virtual environment (tools/.venv) and won't
 touch your system Python.
 
-    Linux (Debian/Ubuntu):  sudo apt install python3 python3-venv
-    Linux (Fedora):         sudo dnf install python3
+    Linux (Debian/Ubuntu):  sudo apt install python3.12 python3.12-venv
+    Linux (Fedora):         sudo dnf install python3.12
     Windows:                https://python.org/downloads
                             (tick "Add Python to PATH" during install)
 
