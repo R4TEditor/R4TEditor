@@ -2,7 +2,9 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR"
+TOOLS_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+cd "$PROJECT_DIR"
 
 # --- Color helpers
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
@@ -24,31 +26,28 @@ for cmd in python3 python; do
 done
 [ -z "$PYTHON" ] && error "Python 3.10+ is required but was not found.\nInstall it with: sudo apt install python3  (Debian/Ubuntu) or equivalent."
 
-info "Using $($PYTHON --version)"
-
-# --- Virtual environment
-VENV_DIR="$SCRIPT_DIR/.venv"
+# --- Venv check
+VENV_DIR="$TOOLS_DIR/.venv"
 if [ ! -d "$VENV_DIR" ]; then
-    info "Creating virtual environment at .venv …"
-    $PYTHON -m venv "$VENV_DIR" || error "Failed to create virtual environment."
-    success "Virtual environment created."
+    info "No virtual environment found — run install_deps.sh first."
+    error "Aborting."
 fi
-
-# Activate
 source "$VENV_DIR/bin/activate"
 
-# --- pip + dependencies 
-info "Checking / installing dependencies from requirements.txt …"
-pip install --quiet --upgrade pip
-pip install --quiet -r "$SCRIPT_DIR/requirements.txt"
-success "Dependencies ready."
-
-# --- Discord RPC (optional, non-fatal) 
-if ! python -c "import pypresence" &>/dev/null 2>&1; then
-    info "Installing pypresence for Discord RPC (optional) …"
-    pip install --quiet pypresence || warn "pypresence install failed, Discord RPC will be disabled."
+# --- uvicorn check
+if ! python -c "import uvicorn" &>/dev/null 2>&1; then
+    error "uvicorn not found in venv. Run install_deps.sh first."
 fi
 
-# --- Launch 
-success "Starting R4TEditor …"
-exec $PYTHON "$SCRIPT_DIR/backend/main.py" "$@"
+# --- Default port, overridable via env
+PORT="${R4T_PORT:-8000}"
+
+warn "Running in DEVELOPMENT mode (auto-reload enabled) on port $PORT"
+info "Press Ctrl+C to stop."
+
+exec uvicorn backend.main:app \
+    --reload \
+    --reload-dir "$PROJECT_DIR/backend" \
+    --host 127.0.0.1 \
+    --port "$PORT" \
+    "$@"
