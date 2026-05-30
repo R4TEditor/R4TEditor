@@ -56,6 +56,9 @@
       <button class="sidebar-tab" data-section="environment" title="Environment">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.4" fill="none"/><path d="M5 8h2l1-2 1.5 4 1-2H11" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
+      <button class="sidebar-tab" data-section="docs" title="Docs Browser">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 2h8l2 2v10a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z" stroke="currentColor" stroke-width="1.4" fill="none"/><path d="M5 7h6M5 10h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      </button>
     </div>
 
     <!-- EXPLORER SECTION -->
@@ -114,6 +117,31 @@
       </div>
       <div class="env-panel" id="env-panel">
         <div class="env-none">Open a folder to detect Skript &amp; addons.</div>
+      </div>
+    </div>
+
+    <!-- DOCS BROWSER SECTION -->
+    <div class="sidebar-section sidebar-section--hidden" id="section-docs">
+      <div class="sidebar-header">
+        <span class="sidebar-title">Docs Browser</span>
+        <div style="display:flex;gap:4px;align-items:center">
+          <select id="docs-source-select" class="docs-source-select" title="Source">
+            <option value="all">All</option>
+            <option value="docs">Skript</option>
+            <option value="addons">Addons</option>
+          </select>
+        </div>
+      </div>
+      <div class="docs-search-wrap">
+        <input type="text" id="docs-search-input" class="docs-search-input" placeholder="Search syntax…" autocomplete="off" spellcheck="false" />
+      </div>
+      <div class="docs-results" id="docs-results">
+        <div class="docs-empty">Search for Skript syntax or browse by typing below.</div>
+      </div>
+      <!-- Detail view -->
+      <div class="docs-detail" id="docs-detail" style="display:none">
+        <button class="docs-back-btn" id="docs-back-btn">&#8592; Back</button>
+        <div class="docs-detail-content" id="docs-detail-content"></div>
       </div>
     </div>
 

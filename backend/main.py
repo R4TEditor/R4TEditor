@@ -1,5 +1,5 @@
 # Global version =====
-APP_VERSION = "0.1.1"
+APP_VERSION = "0.2.0-dev"
 # ====================
 
 import os
@@ -118,6 +118,8 @@ from contextlib import asynccontextmanager
 @asynccontextmanager
 async def _lifespan(application: FastAPI):
     log_broker.set_loop(asyncio.get_running_loop())
+    import threading
+    threading.Thread(target=_init_rpc, daemon=True).start()
     yield
 
 app = FastAPI(title="R4TEditor", version=APP_VERSION, lifespan=_lifespan)
@@ -242,6 +244,27 @@ class ThemeSaveRequest(BaseModel):
 
 # --- SFTP Models
 
+class FileRenameRequest(BaseModel):
+    path: str
+    new_name: str
+
+@app.post("/api/file/rename")
+async def rename_file(req: FileRenameRequest):
+    path = Path(req.path)
+    if not path.exists():
+        raise HTTPException(404, f"Path not found: {req.path}")
+    new_name = req.new_name.strip()
+    if not new_name or "/" in new_name or "\\" in new_name:
+        raise HTTPException(400, "Invalid name")
+    new_path = path.parent / new_name
+    if new_path.exists():
+        raise HTTPException(409, f"A file named '{new_name}' already exists")
+    try:
+        path.rename(new_path)
+        return {"ok": True, "new_path": str(new_path)}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
 class SFTPConnectRequest(BaseModel):
     host: str
     port: int = 22
@@ -310,6 +333,38 @@ async def write_file(req: FileWriteRequest):
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(req.content, encoding="utf-8")
+        return {"ok": True, "path": str(path)}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+class FileDeleteRequest(BaseModel):
+    path: str
+
+class DirectoryDeleteRequest(BaseModel):
+    path: str
+
+@app.post("/api/file/delete")
+async def delete_file(req: FileDeleteRequest):
+    path = Path(req.path)
+    if not path.exists():
+        raise HTTPException(404, f"File not found: {req.path}")
+    if not path.is_file():
+        raise HTTPException(400, "Path is not a file")
+    try:
+        path.unlink()
+        return {"ok": True, "path": str(path)}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+@app.post("/api/directory/delete")
+async def delete_directory(req: DirectoryDeleteRequest):
+    path = Path(req.path)
+    if not path.exists():
+        raise HTTPException(404, f"Directory not found: {req.path}")
+    if not path.is_dir():
+        raise HTTPException(400, "Path is not a directory")
+    try:
+        shutil.rmtree(str(path))
         return {"ok": True, "path": str(path)}
     except Exception as e:
         raise HTTPException(500, str(e))
@@ -540,7 +595,7 @@ async def scan_environment(req: DirectoryRequest):
         installed = (skript_entry.get("version") or "").strip()
         if installed and installed != docs_version:
             warning = (
-                f"You should update Skript — "
+                f"You should update Skript. The latest syntax docs are for version {docs_version}, but you have {installed} installed. "
                 f"installed: {installed}, latest: {docs_version}"
             )
 
@@ -569,6 +624,61 @@ async def get_syntax_addons():
     if data is None:
         raise HTTPException(503, "Addon syntax unavailable and no cache found")
     return data
+
+@app.get("/api/syntax/search")
+async def search_syntax(q: str = "", source: str = "all", limit: int = 60):
+    """
+    Search syntax elements from cached docs/addons.
+    source: 'docs' | 'addons' | 'all'
+    Returns list of {id, name, type, patterns, description, addon, since, source}
+    """
+    results = []
+    needle = q.strip().lower()
+
+    if source in ("docs", "all"):
+        docs = await _fetch_and_cache(DOCS_JSON_URL, "docs.json")
+        if docs and isinstance(docs, dict):
+            for category, items in docs.items():
+                if not isinstance(items, list):
+                    continue
+                for item in items:
+                    name = (item.get("name") or "").lower()
+                    patterns = item.get("patterns") or []
+                    pat_text = " ".join(patterns).lower() if patterns else ""
+                    if not needle or needle in name or needle in pat_text:
+                        results.append({
+                            "id":          item.get("id") or item.get("name"),
+                            "name":        item.get("name", ""),
+                            "type":        category,
+                            "patterns":    patterns[:4],  # cap for transfer size
+                            "description": (item.get("description") or "")[:300],
+                            "since":       item.get("since", ""),
+                            "addon":       "Skript",
+                            "source":      "docs",
+                        })
+
+    if source in ("addons", "all"):
+        addons_data = await _fetch_and_cache(HUB_API_URL, "addons.json")
+        if addons_data and isinstance(addons_data, list):
+            for item in addons_data:
+                name = (item.get("name") or "").lower()
+                patterns_raw = item.get("patterns") or item.get("syntax_pattern") or []
+                if isinstance(patterns_raw, str):
+                    patterns_raw = [patterns_raw]
+                pat_text = " ".join(patterns_raw).lower()
+                if not needle or needle in name or needle in pat_text:
+                    results.append({
+                        "id":          item.get("id") or item.get("name"),
+                        "name":        item.get("name", ""),
+                        "type":        item.get("element_type") or item.get("type") or "syntax",
+                        "patterns":    patterns_raw[:4],
+                        "description": (item.get("description") or "")[:300],
+                        "since":       item.get("since") or item.get("addon_version") or "",
+                        "addon":       item.get("addon_name") or item.get("addon") or "Unknown",
+                        "source":      "hub",
+                    })
+
+    return {"results": results[:limit], "total": len(results)}
 
 @app.get("/api/syntax/status")
 async def get_syntax_status():
@@ -734,6 +844,70 @@ async def logs_ws(websocket: WebSocket):
     finally:
         log_broker.unsubscribe(q)
 
+# --- Discord RPC
+
+_rpc_client = None
+_rpc_enabled = False
+_rpc_start_time: Optional[int] = None
+
+def _init_rpc():
+    """Attempt to connect to Discord RPC. Silent no-op if Discord is not running or pypresence is missing."""
+    global _rpc_client, _rpc_enabled, _rpc_start_time
+    try:
+        from pypresence import Presence
+        import time
+        CLIENT_ID = "1274000000000000000"  # Replace with your Discord App Client ID
+        rpc = Presence(CLIENT_ID)
+        rpc.connect()
+        _rpc_client = rpc
+        _rpc_enabled = True
+        _rpc_start_time = int(time.time())
+        logging.info("Discord RPC connected")
+    except Exception as e:
+        logging.debug(f"Discord RPC unavailable: {e}")
+        _rpc_enabled = False
+
+class RPCUpdateRequest(BaseModel):
+    filename: Optional[str] = None
+    details:  Optional[str] = None
+
+@app.post("/api/rpc/update")
+async def rpc_update(req: RPCUpdateRequest):
+    if not _rpc_enabled or _rpc_client is None:
+        return {"ok": False, "reason": "Discord RPC not connected"}
+    try:
+        import asyncio
+        filename = req.filename or "Untitled"
+        details  = req.details  or "Editing a Skript file"
+        await asyncio.get_event_loop().run_in_executor(None, lambda: _rpc_client.update(
+            details=details,
+            state=f"File: {filename}",
+            start=_rpc_start_time,
+            large_image="r4teditor",
+            large_text="R4TEditor",
+            small_image="skript",
+            small_text="SkriptLang",
+        ))
+        return {"ok": True}
+    except Exception as e:
+        logging.warning(f"Discord RPC update failed: {e}")
+        return {"ok": False, "reason": str(e)}
+
+@app.get("/api/rpc/status")
+async def rpc_status():
+    return {"enabled": _rpc_enabled}
+
+@app.post("/api/rpc/clear")
+async def rpc_clear():
+    if not _rpc_enabled or _rpc_client is None:
+        return {"ok": False}
+    try:
+        import asyncio
+        await asyncio.get_event_loop().run_in_executor(None, lambda: _rpc_client.clear())
+        return {"ok": True}
+    except Exception as e:
+        return {"ok": False, "reason": str(e)}
+
 # --- Entry point
 
 def _wait_for_server(host: str, port: int, timeout: float = 10.0) -> bool:
@@ -759,7 +933,7 @@ if __name__ == "__main__":
         server_thread = threading.Thread(target=start_server, daemon=True)
         server_thread.start()
         if not _wait_for_server(HOST, PORT):
-            print("[R4TEditor] Server did not start in time — falling back to browser")
+            print("[R4TEditor] Server did not start in time, falling back to browser")
             raise ImportError("server timeout")  # jump to browser fallback
         window = webview.create_window(
             "R4TEditor",
