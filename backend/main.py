@@ -143,6 +143,9 @@ def _install_log_capture():
 _install_log_capture()
 logging.info(f"R4TEditor {APP_VERSION} starting up")
 
+from backend.updater import check_and_update
+check_and_update(APP_VERSION)
+
 from contextlib import asynccontextmanager
 
 # --- Discord RPC (defined here so _lifespan can reference _init_rpc)
@@ -1022,6 +1025,54 @@ async def rpc_clear():
     if _rpc_queue is not None:
         _rpc_queue.put({"action": "clear"})
     return {"ok": True}
+
+# --- Update check endpoint
+
+@app.get("/api/update/check")
+async def update_check():
+    """
+    Returns the latest release info from GitHub without applying anything.
+    Useful for surfacing an 'update available' notice in the UI.
+    """
+    import hashlib as _hashlib
+    from backend.updater import (
+        _fetch_latest_release, _find_asset, _parse_digest,
+        _hash_file, _current_exe, _is_frozen, EXE_ASSET_NAME
+    )
+    try:
+        release = await asyncio.get_event_loop().run_in_executor(None, _fetch_latest_release)
+    except Exception as e:
+        raise HTTPException(502, f"Could not reach GitHub: {e}")
+
+    latest_version = release.get("tag_name", "").lstrip("v")
+    asset = _find_asset(release)
+    if asset is None:
+        return {
+            "current_version": APP_VERSION,
+            "latest_version":  latest_version,
+            "up_to_date":      None,
+            "error":           f"No asset named '{EXE_ASSET_NAME}' in latest release",
+        }
+
+    remote_digest = _parse_digest(asset.get("digest", ""))
+    if not _is_frozen() or remote_digest is None:
+        return {
+            "current_version": APP_VERSION,
+            "latest_version":  latest_version,
+            "up_to_date":      None,
+            "error":           "Running in dev mode or digest unavailable — cannot compare",
+        }
+
+    local_hash = await asyncio.get_event_loop().run_in_executor(None, _hash_file, _current_exe())
+    up_to_date = local_hash == remote_digest
+
+    return {
+        "current_version": APP_VERSION,
+        "latest_version":  latest_version,
+        "up_to_date":      up_to_date,
+        "download_url":    asset["browser_download_url"] if not up_to_date else None,
+    }
+
 
 # --- Entry point
 
