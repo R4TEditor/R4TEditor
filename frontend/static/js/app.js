@@ -727,6 +727,9 @@ function makeTreeItem(entry, depth) {
   item.appendChild(icon);
   item.appendChild(nameEl);
 
+  // Right-click context menu (matches SFTP tree behaviour)
+  item.addEventListener("contextmenu", (e) => showTreeContextMenu(e, item));
+
   if (entry.is_dir) {
     item.classList.add("is-dir");
     item.dataset.open = "false";
@@ -1123,11 +1126,11 @@ function setActiveTab(id) {
 // Discord Rich Presence
 // ============================================================
 
-let _rpcAvailable = null; // null = unchecked, true/false = result
+let _rpcAvailable = null; // null = unchecked, true = connected, false = retry next time
 
 async function updateDiscordRPC(tab) {
-  // Check availability once per session
-  if (_rpcAvailable === null) {
+  // Re-check every call until connected; once true, trust it until an error
+  if (_rpcAvailable !== true) {
     try {
       const st = await api("GET", "/api/rpc/status");
       _rpcAvailable = st.enabled === true;
@@ -1140,8 +1143,9 @@ async function updateDiscordRPC(tab) {
   try {
     const filename = tab ? tab.name : null;
     const isSkript = filename && filename.endsWith(".sk");
-    const details  = isSkript ? "Writing a Skript" : (filename ? "Editing a file" : "Idle");
-    await api("POST", "/api/rpc/update", { filename, details });
+    const details  = isSkript ? "Editing a .sk file" : (filename ? "Editing a file" : "Idle");
+    const state    = filename || null;
+    await api("POST", "/api/rpc/update", { filename, details, state });
   } catch (e) {
     debugLog("Discord RPC update failed: " + e.message, "WARNING");
     _rpcAvailable = false;
@@ -2074,6 +2078,13 @@ document.addEventListener("DOMContentLoaded", init);
 let _docsSearchTimer = null;
 let _docsCurrentResults = [];
 
+// Safe string coercion — prevents escHtml from crashing on null/number/array values
+function safeStr(v) {
+  if (v == null) return "";
+  if (Array.isArray(v)) return v.join(", ");
+  return String(v);
+}
+
 async function docsSearch(query, source) {
   const resultsEl = $("docs-results");
   const detailEl  = $("docs-detail");
@@ -2093,7 +2104,7 @@ async function docsSearch(query, source) {
     _docsCurrentResults = data.results || [];
     renderDocsResults(_docsCurrentResults);
   } catch (e) {
-    resultsEl.innerHTML = '<div class="docs-empty docs-error">Search failed: ' + escHtml(e.message) + '</div>';
+    resultsEl.innerHTML = '<div class="docs-empty docs-error">Search failed: ' + escHtml(safeStr(e.message)) + '</div>';
   }
 }
 
@@ -2118,16 +2129,17 @@ function renderDocsResults(results) {
   for (const item of results) {
     const row = document.createElement("div");
     row.className = "docs-result-row";
-    const typeKey = (item.type || "").toLowerCase();
-    const color = TYPE_COLORS[typeKey] || "#94a3b8";
-    const badge = item.source === "hub" ? item.addon : "Skript";
+    const typeKey = safeStr(item.type).toLowerCase();
+    const color   = TYPE_COLORS[typeKey] || "#94a3b8";
+    const badge   = item.source === "hub" ? safeStr(item.addon) : "Skript";
+    const patterns = Array.isArray(item.patterns) ? item.patterns : [];
     row.innerHTML = `
       <div class="docs-row-top">
-        <span class="docs-type-badge" style="color:${color}">${escHtml(item.type || "syntax")}</span>
+        <span class="docs-type-badge" style="color:${color}">${escHtml(typeKey || "syntax")}</span>
         <span class="docs-addon-badge">${escHtml(badge)}</span>
       </div>
-      <div class="docs-row-name">${escHtml(item.name)}</div>
-      ${item.patterns.length ? `<div class="docs-row-pattern">${escHtml(item.patterns[0])}</div>` : ""}
+      <div class="docs-row-name">${escHtml(safeStr(item.name))}</div>
+      ${patterns.length ? `<div class="docs-row-pattern">${escHtml(safeStr(patterns[0]))}</div>` : ""}
     `;
     row.addEventListener("click", () => showDocsDetail(item));
     el.appendChild(row);
@@ -2150,26 +2162,32 @@ function showDocsDetail(item) {
     sections:    "#facc15",
     syntax:      "#94a3b8",
   };
-  const typeKey = (item.type || "").toLowerCase();
-  const color = TYPE_COLORS[typeKey] || "#94a3b8";
+  const typeKey  = safeStr(item.type).toLowerCase();
+  const color    = TYPE_COLORS[typeKey] || "#94a3b8";
+  const patterns = Array.isArray(item.patterns) ? item.patterns : [];
+  const name     = safeStr(item.name);
+  const addon    = safeStr(item.addon);
+  const since    = safeStr(item.since);
+  const desc     = safeStr(item.description);
+  const itemId   = safeStr(item.id);
 
-  const patternsHtml = item.patterns.length
-    ? item.patterns.map(p => `<div class="docs-detail-pattern">${escHtml(p)}</div>`).join("")
+  const patternsHtml = patterns.length
+    ? patterns.map(p => `<div class="docs-detail-pattern">${escHtml(safeStr(p))}</div>`).join("")
     : "";
 
-  const hubLink = item.source === "hub" && item.id
-    ? `<a href="https://skripthub.net/docs/?id=${escHtml(String(item.id))}" target="_blank" class="docs-external-link">View on SkriptHub ↗</a>`
+  const hubLink = item.source === "hub" && itemId
+    ? `<a href="https://skripthub.net/docs/?id=${escHtml(itemId)}" target="_blank" class="docs-external-link">View on SkriptHub ↗</a>`
     : `<a href="https://docs.skriptlang.org/docs.html" target="_blank" class="docs-external-link">View on SkriptLang ↗</a>`;
 
   contentEl.innerHTML = `
     <div class="docs-detail-header">
-      <span class="docs-type-badge" style="color:${color};font-size:11px">${escHtml(item.type || "syntax")}</span>
-      ${item.since ? `<span class="docs-since">since ${escHtml(item.since)}</span>` : ""}
+      <span class="docs-type-badge" style="color:${color};font-size:11px">${escHtml(typeKey || "syntax")}</span>
+      ${since ? `<span class="docs-since">since ${escHtml(since)}</span>` : ""}
     </div>
-    <div class="docs-detail-name">${escHtml(item.name)}</div>
-    ${item.addon ? `<div class="docs-detail-addon">${escHtml(item.addon)}</div>` : ""}
+    <div class="docs-detail-name">${escHtml(name)}</div>
+    ${addon ? `<div class="docs-detail-addon">${escHtml(addon)}</div>` : ""}
     ${patternsHtml ? `<div class="docs-detail-section-label">Patterns</div><div class="docs-detail-patterns">${patternsHtml}</div>` : ""}
-    ${item.description ? `<div class="docs-detail-section-label">Description</div><div class="docs-detail-desc">${escHtml(item.description)}</div>` : ""}
+    ${desc ? `<div class="docs-detail-section-label">Description</div><div class="docs-detail-desc">${escHtml(desc)}</div>` : ""}
     <div class="docs-detail-links">${hubLink}</div>
   `;
 }
