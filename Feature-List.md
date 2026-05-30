@@ -47,5 +47,7 @@
     - [ ] SkriptHub syntax search and docs browser
     - [ ] Discord RPC
     - [ ] Colaboration between users
+    - [ ] Linux Launch script
+     
 
 Thanks, R4T Out.
