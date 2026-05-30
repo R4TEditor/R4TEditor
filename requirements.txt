@@ -5,3 +5,4 @@ paramiko>=3.4.0
 PyYAML>=6.0
 httpx
 pywebview>=4.4.1
+pypresence>=4.3.0

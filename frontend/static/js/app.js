@@ -1,5 +1,5 @@
 /**
- * R4TEditor — Main Application Logic
+ * R4TEditor, Main Application Logic
  */
 
 // ============================================================
@@ -315,7 +315,7 @@ async function pickFile() {
 }
 
 // ============================================================
-// SFTP — Saved Sites
+// SFTP, Saved Sites
 // Sites are stored in localStorage. Passwords are only saved if savePass is true.
 // ============================================================
 const SFTP_SITES_KEY = "r4t_sftp_sites";
@@ -425,7 +425,7 @@ function renderSftpSitesList() {
 }
 
 // ============================================================
-// SFTP — Active Connections
+// SFTP, Active Connections
 // ============================================================
 
 async function connectSftpSite(site) {
@@ -556,6 +556,9 @@ function makeSftpTreeItem(entry, depth, sessionId, conn) {
   item.appendChild(icon);
   item.appendChild(nameEl);
 
+  // Right-click context menu for all local tree items
+  item.addEventListener("contextmenu", (e) => showTreeContextMenu(e, item));
+
   if (entry.is_dir) {
     item.classList.add("is-dir");
     item.dataset.open = "false";
@@ -611,7 +614,7 @@ function activateSidebarSection(name) {
 }
 
 // ============================================================
-// Explorer — Multi-Folder Tabs
+// Explorer, Multi-Folder Tabs
 // ============================================================
 
 /** Adds a folder to the explorer tab bar. Avoids duplicates. */
@@ -724,6 +727,9 @@ function makeTreeItem(entry, depth) {
   item.appendChild(icon);
   item.appendChild(nameEl);
 
+  // Right-click context menu (matches SFTP tree behaviour)
+  item.addEventListener("contextmenu", (e) => showTreeContextMenu(e, item));
+
   if (entry.is_dir) {
     item.classList.add("is-dir");
     item.dataset.open = "false";
@@ -803,6 +809,176 @@ function updateActiveTreeItem(path) {
   $qa(".tree-item").forEach(el => el.classList.toggle("active", el.dataset.path === path));
 }
 
+// ============================================================
+// Context Menu
+// ============================================================
+
+let _ctxMenu = null;
+
+function closeContextMenu() {
+  _ctxMenu?.remove();
+  _ctxMenu = null;
+}
+
+function showContextMenu(x, y, items) {
+  closeContextMenu();
+  const menu = document.createElement("div");
+  menu.className = "ctx-menu";
+  menu.style.cssText = `position:fixed;left:${x}px;top:${y}px;z-index:9999;`;
+
+  for (const item of items) {
+    if (item === "---") {
+      const sep = document.createElement("div");
+      sep.className = "ctx-sep";
+      menu.appendChild(sep);
+      continue;
+    }
+    const btn = document.createElement("button");
+    btn.className = "ctx-item" + (item.danger ? " ctx-item--danger" : "");
+    btn.textContent = item.label;
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      closeContextMenu();
+      item.action();
+    });
+    menu.appendChild(btn);
+  }
+
+  document.body.appendChild(menu);
+  _ctxMenu = menu;
+
+  requestAnimationFrame(() => {
+    const rect = menu.getBoundingClientRect();
+    if (rect.right > window.innerWidth)   menu.style.left = (x - rect.width) + "px";
+    if (rect.bottom > window.innerHeight) menu.style.top  = (y - rect.height) + "px";
+  });
+}
+
+document.addEventListener("click", closeContextMenu, true);
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeContextMenu(); });
+
+// ============================================================
+// File Tree Operations (Delete, Rename, Copy Path)
+// ============================================================
+
+async function deleteFile(filePath, fileName, treeItem) {
+  if (!confirm(`Delete "${fileName}"?\nThis cannot be undone.`)) return;
+  try {
+    await api("POST", "/api/file/delete", { path: filePath });
+    const tab = state.tabs.find(t => t.path === filePath);
+    if (tab) {
+      state.tabs = state.tabs.filter(t => t.id !== tab.id);
+      if (state.activeTabId === tab.id) {
+        const next = state.tabs[0];
+        if (next) setActiveTab(next.id);
+        else { state.activeTabId = null; showWelcome(); }
+      }
+      renderTabs();
+    }
+    treeItem.remove();
+    showNotification(`Deleted: ${fileName}`, "success");
+    debugLog(`Deleted file: ${filePath}`);
+  } catch (e) {
+    showNotification("Delete failed: " + e.message, "error");
+  }
+}
+
+async function deleteDirectory(dirPath, dirName, treeItem) {
+  if (!confirm(`Delete folder "${dirName}" and ALL its contents?\nThis cannot be undone.`)) return;
+  try {
+    await api("POST", "/api/directory/delete", { path: dirPath });
+    const prefix = dirPath.replace(/\\/g, "/") + "/";
+    const removed = state.tabs.filter(t => t.path && t.path.replace(/\\/g, "/").startsWith(prefix));
+    state.tabs = state.tabs.filter(t => !removed.includes(t));
+    if (removed.find(t => t.id === state.activeTabId)) {
+      const next = state.tabs[0];
+      if (next) setActiveTab(next.id);
+      else { state.activeTabId = null; showWelcome(); }
+    }
+    renderTabs();
+    if (treeItem.dataset.open === "true") collapseDir(treeItem);
+    treeItem.remove();
+    showNotification(`Deleted folder: ${dirName}`, "success");
+    debugLog(`Deleted directory: ${dirPath}`);
+  } catch (e) {
+    showNotification("Delete failed: " + e.message, "error");
+  }
+}
+
+function startRename(itemPath, itemName, treeItem) {
+  const nameEl = treeItem.querySelector(".tree-name");
+  if (!nameEl) return;
+
+  const input = document.createElement("input");
+  input.className = "tree-rename-input";
+  input.value = itemName;
+  nameEl.replaceWith(input);
+  input.focus();
+  const dotIdx = itemName.lastIndexOf(".");
+  input.setSelectionRange(0, dotIdx > 0 ? dotIdx : itemName.length);
+
+  const commit = async () => {
+    const newName = input.value.trim();
+    input.replaceWith(nameEl);
+    if (!newName || newName === itemName) return;
+    try {
+      const res = await api("POST", "/api/file/rename", { path: itemPath, new_name: newName });
+      treeItem.dataset.path = res.new_path;
+      treeItem.dataset.name = newName;
+      nameEl.textContent = newName;
+      if (newName.endsWith(".sk")) nameEl.classList.add("sk-file");
+      else nameEl.classList.remove("sk-file");
+      const tab = state.tabs.find(t => t.path === itemPath);
+      if (tab) { tab.path = res.new_path; tab.name = newName; renderTabs(); }
+      showNotification(`Renamed to: ${newName}`, "success");
+    } catch (e) {
+      showNotification("Rename failed: " + e.message, "error");
+    }
+  };
+
+  const cancel = () => input.replaceWith(nameEl);
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter")  { e.preventDefault(); commit(); }
+    if (e.key === "Escape") { e.preventDefault(); cancel(); }
+    e.stopPropagation();
+  });
+  input.addEventListener("blur", commit);
+}
+
+function showTreeContextMenu(e, treeItem) {
+  e.preventDefault();
+  e.stopPropagation();
+
+  const isDir   = treeItem.dataset.isDir === "true";
+  const filePath = treeItem.dataset.path;
+  const fileName = treeItem.dataset.name;
+
+  const items = [];
+
+  if (!isDir) {
+    items.push({ label: "Open", action: () => openFile(filePath, fileName) });
+    items.push("---");
+  }
+
+  items.push({ label: "Rename", action: () => startRename(filePath, fileName, treeItem) });
+  items.push({ label: "Copy Path", action: () => {
+    navigator.clipboard.writeText(filePath).then(
+      () => showNotification("Path copied", "success"),
+      () => showNotification("Copy failed", "error")
+    );
+  }});
+  items.push("---");
+
+  if (isDir) {
+    items.push({ label: "Delete Folder…", danger: true, action: () => deleteDirectory(filePath, fileName, treeItem) });
+  } else {
+    items.push({ label: "Delete File…", danger: true, action: () => deleteFile(filePath, fileName, treeItem) });
+  }
+
+  showContextMenu(e.clientX, e.clientY, items);
+}
+
 function folderIcon(open) {
   const opacity = open ? "" : ' opacity="0.5"';
   return `<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M1 4a1 1 0 0 1 1-1h4l2 2h6a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4z" fill="var(--syn-expression)"${opacity}/></svg>`;
@@ -868,7 +1044,7 @@ function initPageFileDrop() {
         if (data?.path) {
           openFile(data.path, file.name);
         } else {
-          // Backend couldn't map the file — read its text content directly
+          // Backend couldn't map the file, read its text content directly
           const text = await file.text();
           const tab = { id: genId(), name: file.name, path: null, content: text, unsaved: false };
           state.tabs.push(tab);
@@ -943,11 +1119,44 @@ function setActiveTab(id) {
   }
   updateActiveTreeItem(tab.path);
   updateStatusBar();
+  updateDiscordRPC(tab);
+}
+
+// ============================================================
+// Discord Rich Presence
+// ============================================================
+
+let _rpcAvailable = null; // null = unchecked, true = connected, false = retry next time
+
+async function updateDiscordRPC(tab) {
+  // Re-check every call until connected; once true, trust it until an error
+  if (_rpcAvailable !== true) {
+    try {
+      const st = await api("GET", "/api/rpc/status");
+      _rpcAvailable = st.enabled === true;
+    } catch {
+      _rpcAvailable = false;
+    }
+  }
+  if (!_rpcAvailable) return;
+
+  try {
+    const filename = tab ? tab.name : null;
+    const isSkript = filename && filename.endsWith(".sk");
+    const details  = isSkript ? "Editing a .sk file" : (filename ? "Editing a file" : "Idle");
+    const state    = filename || null;
+    await api("POST", "/api/rpc/update", { filename, details, state });
+  } catch (e) {
+    debugLog("Discord RPC update failed: " + e.message, "WARNING");
+    _rpcAvailable = false;
+  }
 }
 
 function showWelcome() {
   $("editor-welcome").style.display = "";
   $("cm-editor").style.display = "none";
+  // Clear RPC when no files are open
+  if (_rpcAvailable) api("POST", "/api/rpc/clear").catch(() => {});
 }
 
 function renderTabs() {
@@ -996,7 +1205,7 @@ async function saveActiveFile() {
 
   if (tab.sftp) {
     const sessionId = tab.sftpSessionId || state.sftp.sessionId;
-    if (!sessionId) { showNotification("SFTP session lost — reconnect and try again", "error"); return; }
+    if (!sessionId) { showNotification("SFTP session lost, reconnect and try again", "error"); return; }
     try {
       await api("POST", "/api/sftp/write", { session_id: sessionId, path: tab.path, content: tab.content });
       tab.unsaved = false;
@@ -1148,7 +1357,7 @@ function updateHeaderPreview(rawText) {
   const preview = $("header-preview");
   if (!preview) return;
   if (!rawText.trim()) {
-    preview.textContent = "(empty — no header will be added)";
+    preview.textContent = "(empty, no header will be added)";
     preview.style.color = "var(--text-muted)";
     preview.style.fontStyle = "italic";
     return;
@@ -1782,7 +1991,7 @@ async function init() {
   loadHeaderTemplate();
   wireHeaderTemplate();
 
-  // Sidebar resize — invert delta when the sidebar is on the right
+  // Sidebar resize, invert delta when the sidebar is on the right
   // so dragging left still increases width (instead of shrinking it).
   setupResize(
     $("sidebar-resize"),
@@ -1793,7 +2002,7 @@ async function init() {
     () => $("main-layout").classList.contains("layout--sidebar-right")
   );
 
-  // Bottom panel resize — always inverted because the handle is at the top edge
+  // Bottom panel resize, always inverted because the handle is at the top edge
   setupResize(
     $("bottom-resize"),
     () => $("bottom-panel"),
@@ -1835,6 +2044,9 @@ async function init() {
     onDiagnostics: renderDiagnosticsPanel,
   });
 
+  // Wire docs browser
+  wireDocsBrowser();
+
   // Apply the saved theme
   await applyThemeById(state.settings.theme_id || "royal-purple-dark");
 
@@ -1858,6 +2070,154 @@ async function init() {
 }
 
 document.addEventListener("DOMContentLoaded", init);
+
+// ============================================================
+// Docs Browser
+// ============================================================
+
+let _docsSearchTimer = null;
+let _docsCurrentResults = [];
+
+// Safe string coercion, prevents escHtml from crashing on null/number/array values
+function safeStr(v) {
+  if (v == null) return "";
+  if (Array.isArray(v)) return v.join(", ");
+  return String(v);
+}
+
+async function docsSearch(query, source) {
+  const resultsEl = $("docs-results");
+  const detailEl  = $("docs-detail");
+  detailEl.style.display = "none";
+  resultsEl.style.display = "";
+
+  if (query.trim().length === 0) {
+    resultsEl.innerHTML = '<div class="docs-empty">Type to search Skript syntax.</div>';
+    return;
+  }
+
+  resultsEl.innerHTML = '<div class="docs-empty">Searching…</div>';
+
+  try {
+    const qs = new URLSearchParams({ q: query, source: source || "all", limit: "80" });
+    const data = await api("GET", "/api/syntax/search?" + qs.toString());
+    _docsCurrentResults = data.results || [];
+    renderDocsResults(_docsCurrentResults);
+  } catch (e) {
+    resultsEl.innerHTML = '<div class="docs-empty docs-error">Search failed: ' + escHtml(safeStr(e.message)) + '</div>';
+  }
+}
+
+function renderDocsResults(results) {
+  const el = $("docs-results");
+  if (!results.length) {
+    el.innerHTML = '<div class="docs-empty">No results.</div>';
+    return;
+  }
+
+  const TYPE_COLORS = {
+    expressions: "#a78bfa",
+    effects:     "#34d399",
+    conditions:  "#60a5fa",
+    events:      "#f472b6",
+    types:       "#fb923c",
+    sections:    "#facc15",
+    syntax:      "#94a3b8",
+  };
+
+  el.innerHTML = "";
+  for (const item of results) {
+    const row = document.createElement("div");
+    row.className = "docs-result-row";
+    const typeKey = safeStr(item.type).toLowerCase();
+    const color   = TYPE_COLORS[typeKey] || "#94a3b8";
+    const badge   = item.source === "hub" ? safeStr(item.addon) : "Skript";
+    const patterns = Array.isArray(item.patterns) ? item.patterns : [];
+    row.innerHTML = `
+      <div class="docs-row-top">
+        <span class="docs-type-badge" style="color:${color}">${escHtml(typeKey || "syntax")}</span>
+        <span class="docs-addon-badge">${escHtml(badge)}</span>
+      </div>
+      <div class="docs-row-name">${escHtml(safeStr(item.name))}</div>
+      ${patterns.length ? `<div class="docs-row-pattern">${escHtml(safeStr(patterns[0]))}</div>` : ""}
+    `;
+    row.addEventListener("click", () => showDocsDetail(item));
+    el.appendChild(row);
+  }
+}
+
+function showDocsDetail(item) {
+  const resultsEl = $("docs-results");
+  const detailEl  = $("docs-detail");
+  const contentEl = $("docs-detail-content");
+  resultsEl.style.display = "none";
+  detailEl.style.display  = "";
+
+  const TYPE_COLORS = {
+    expressions: "#a78bfa",
+    effects:     "#34d399",
+    conditions:  "#60a5fa",
+    events:      "#f472b6",
+    types:       "#fb923c",
+    sections:    "#facc15",
+    syntax:      "#94a3b8",
+  };
+  const typeKey  = safeStr(item.type).toLowerCase();
+  const color    = TYPE_COLORS[typeKey] || "#94a3b8";
+  const patterns = Array.isArray(item.patterns) ? item.patterns : [];
+  const name     = safeStr(item.name);
+  const addon    = safeStr(item.addon);
+  const since    = safeStr(item.since);
+  const desc     = safeStr(item.description);
+  const itemId   = safeStr(item.id);
+
+  const patternsHtml = patterns.length
+    ? patterns.map(p => `<div class="docs-detail-pattern">${escHtml(safeStr(p))}</div>`).join("")
+    : "";
+
+  const hubLink = item.source === "hub" && itemId
+    ? `<a href="https://skripthub.net/docs/?id=${escHtml(itemId)}" target="_blank" class="docs-external-link">View on SkriptHub ↗</a>`
+    : `<a href="https://docs.skriptlang.org/docs.html" target="_blank" class="docs-external-link">View on SkriptLang ↗</a>`;
+
+  contentEl.innerHTML = `
+    <div class="docs-detail-header">
+      <span class="docs-type-badge" style="color:${color};font-size:11px">${escHtml(typeKey || "syntax")}</span>
+      ${since ? `<span class="docs-since">since ${escHtml(since)}</span>` : ""}
+    </div>
+    <div class="docs-detail-name">${escHtml(name)}</div>
+    ${addon ? `<div class="docs-detail-addon">${escHtml(addon)}</div>` : ""}
+    ${patternsHtml ? `<div class="docs-detail-section-label">Patterns</div><div class="docs-detail-patterns">${patternsHtml}</div>` : ""}
+    ${desc ? `<div class="docs-detail-section-label">Description</div><div class="docs-detail-desc">${escHtml(desc)}</div>` : ""}
+    <div class="docs-detail-links">${hubLink}</div>
+  `;
+}
+
+function wireDocsBrowser() {
+  const input  = $("docs-search-input");
+  const srcSel = $("docs-source-select");
+  const backBtn = $("docs-back-btn");
+
+  if (!input) return;
+
+  const triggerSearch = () => {
+    clearTimeout(_docsSearchTimer);
+    _docsSearchTimer = setTimeout(() => {
+      docsSearch(input.value, srcSel?.value || "all");
+    }, 280);
+  };
+
+  input.addEventListener("input", triggerSearch);
+  srcSel?.addEventListener("change", triggerSearch);
+
+  backBtn?.addEventListener("click", () => {
+    $("docs-detail").style.display = "none";
+    $("docs-results").style.display = "";
+    renderDocsResults(_docsCurrentResults);
+  });
+
+  // Trigger a blank search to show initial prompt
+  docsSearch("", "all");
+}
 
 // ============================================================
 // Small Caps Translator
@@ -1933,7 +2293,7 @@ function applySmallCaps() {
     _lastSmallCaps = { from, converted, original: sel };
     view.focus();
   } else {
-    // No selection — work on last word before cursor
+    // No selection, work on last word before cursor
     const pos = view.state.selection.main.head;
     const line = view.state.doc.lineAt(pos);
     const textBefore = line.text.slice(0, pos - line.from);
@@ -2061,7 +2421,7 @@ function commitHexInsert() {
   closeHexPicker();
 }
 
-// Wire after DOM ready — hook into existing init flow
+// Wire after DOM ready, hook into existing init flow
 document.addEventListener("DOMContentLoaded", () => {
   // Wire format toolbar after a short delay to ensure DOM is ready
   requestAnimationFrame(wireFormatToolbar);

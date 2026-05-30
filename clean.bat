@@ -17,3 +17,4 @@ if exist R4TEditor.spec (
 )
 
 echo Done.
+pause

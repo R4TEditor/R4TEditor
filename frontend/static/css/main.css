@@ -1,4 +1,4 @@
-/* ===== R4TEditor — Main Stylesheet ===== */
+/* ===== R4TEditor, Main Stylesheet ===== */
 :root {
   --accent: #6B2FA0;
   --accent-dim: #6B2FA022;
@@ -1608,3 +1608,248 @@ input[type="range"] { flex: 1; accent-color: var(--accent); }
   padding: 12px 14px;
   border-top: 1px solid var(--border);
 }
+
+/* ============================================================
+   Context Menu
+   ============================================================ */
+
+.ctx-menu {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 4px;
+  min-width: 160px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.45);
+  font-family: var(--font-ui);
+  font-size: 12px;
+}
+
+.ctx-item {
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ctx-item:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+.ctx-item--danger {
+  color: #ef4444;
+}
+
+.ctx-item--danger:hover {
+  background: #ef4444;
+  color: #fff;
+}
+
+.ctx-sep {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+
+/* Inline rename input in the file tree */
+.tree-rename-input {
+  background: var(--bg-input, var(--bg-panel));
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  padding: 0 4px;
+  width: 130px;
+  outline: none;
+}
+
+/* ============================================================
+   Docs Browser
+   ============================================================ */
+
+.docs-source-select {
+  background: var(--bg-input, var(--bg-panel));
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-muted);
+  font: 10px var(--font-ui);
+  padding: 2px 4px;
+  cursor: pointer;
+}
+
+.docs-search-wrap {
+  padding: 6px 8px 4px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.docs-search-input {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--bg-input, rgba(0,0,0,0.2));
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text);
+  font: 12px var(--font-ui);
+  padding: 5px 8px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.docs-search-input:focus { border-color: var(--accent); }
+
+.docs-results {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.docs-empty {
+  padding: 16px 10px;
+  color: var(--text-muted);
+  font: 11px var(--font-ui);
+  text-align: center;
+}
+
+.docs-error { color: #ef4444; }
+
+.docs-result-row {
+  padding: 7px 10px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background 0.1s;
+}
+
+.docs-result-row:hover { background: var(--bg-hover, rgba(255,255,255,0.05)); }
+
+.docs-row-top {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 2px;
+}
+
+.docs-type-badge {
+  font: 700 9px var(--font-ui);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.docs-addon-badge {
+  font: 9px var(--font-ui);
+  color: var(--text-muted);
+  margin-left: auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 80px;
+}
+
+.docs-row-name {
+  font: 600 12px var(--font-ui);
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.docs-row-pattern {
+  font: 10px var(--font-editor, monospace);
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+/* Detail view */
+.docs-detail {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.docs-back-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font: 11px var(--font-ui);
+  padding: 6px 10px;
+  cursor: pointer;
+  text-align: left;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.docs-back-btn:hover { text-decoration: underline; }
+
+.docs-detail-content {
+  padding: 10px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.docs-detail-header {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.docs-since {
+  font: 10px var(--font-ui);
+  color: var(--text-muted);
+}
+
+.docs-detail-name {
+  font: 700 14px var(--font-ui);
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.docs-detail-addon {
+  font: 10px var(--font-ui);
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.docs-detail-section-label {
+  font: 700 9px var(--font-ui);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin: 10px 0 4px;
+}
+
+.docs-detail-patterns { margin-bottom: 4px; }
+
+.docs-detail-pattern {
+  font: 11px var(--font-editor, monospace);
+  color: var(--syn-string, #86efac);
+  background: rgba(0,0,0,0.15);
+  border-radius: 3px;
+  padding: 3px 6px;
+  margin-bottom: 3px;
+  word-break: break-all;
+}
+
+.docs-detail-desc {
+  font: 12px/1.55 var(--font-ui);
+  color: var(--text-muted);
+  white-space: pre-wrap;
+}
+
+.docs-detail-links { margin-top: 12px; }
+
+.docs-external-link {
+  font: 11px var(--font-ui);
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.docs-external-link:hover { text-decoration: underline; }

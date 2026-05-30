@@ -1,1 +1,2 @@
 python -m PyInstaller --onefile --windowed --icon "frontend/static/favicon.ico" --add-data "frontend;frontend" --add-data "themes;themes" --name "R4TEditor" --hidden-import uvicorn.logging --hidden-import uvicorn.loops --hidden-import uvicorn.loops.auto --hidden-import uvicorn.protocols --hidden-import uvicorn.protocols.http.auto --hidden-import uvicorn.protocols.websockets.auto --hidden-import uvicorn.lifespan.on --hidden-import paramiko --hidden-import pywebview --hidden-import pywebview.platforms.winforms backend/main.py
+pause

@@ -6,8 +6,8 @@
     - [x] Move and rename files
     - [x] Folder picker dialog
     - [x] File picker dialog
-    - [ ] Delete files
-    - [ ] Right click context menu (delete, copy, paste, etc.)
+    - [X] Delete files
+    - [X] Right click context menu (delete, copy, paste, etc.)
 - [X] SFTP
     - [X] Connect to remote servers via SFTP
     - [x] Read and write remote files
@@ -44,10 +44,10 @@
     - [X] Small caps translator
     - [X] HTML color code preview
     - [X] Automatic script header on new file
-    - [ ] SkriptHub syntax search and docs browser
-    - [ ] Discord RPC
+    - [X] SkriptHub syntax search and docs browser
+    - [X] Discord RPC
     - [ ] Colaboration between users
-    - [ ] Linux Launch script
+    - [X] Linux Launch script
      
 
 Thanks, R4T Out.
