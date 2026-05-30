@@ -34,11 +34,6 @@ if [ ! -d "$VENV_DIR" ]; then
 fi
 source "$VENV_DIR/bin/activate"
 
-if ! python -c "import PyInstaller" &>/dev/null 2>&1; then
-    info "Installing PyInstaller …"
-    pip install --quiet pyinstaller || error "Failed to install PyInstaller."
-fi
-
 # --- Build
 info "Building R4TEditor binary …"
 pyinstaller \

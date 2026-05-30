@@ -48,12 +48,7 @@ info "Installing dependencies from tools/requirements.txt …"
 pip install --quiet -r "$TOOLS_DIR/requirements.txt"
 success "Core dependencies installed."
 
-# --- Discord RPC (optional, non-fatal)
-if ! python -c "import pypresence" &>/dev/null 2>&1; then
-    info "Installing pypresence for Discord RPC (optional) …"
-    pip install --quiet pypresence || warn "pypresence install failed — Discord RPC will be disabled."
-else
-    info "pypresence already installed."
-fi
+info "Installing PyInstaller …"
+pip install --quiet pyinstaller || warn "PyInstaller install failed — build will not work."
 
 success "All dependencies ready. You can now run launch.sh or build.sh."

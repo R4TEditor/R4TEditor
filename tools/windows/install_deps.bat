@@ -31,8 +31,8 @@ python -m pip install --quiet --upgrade pip
 echo [R4TEditor] Installing dependencies from tools\requirements.txt ...
 pip install --quiet -r "%~dp0..\requirements.txt"
 
-echo [R4TEditor] Installing pypresence (optional, for Discord RPC) ...
-pip install --quiet pypresence || echo [R4TEditor] WARNING: pypresence install failed, Discord RPC will be disabled.
+echo [R4TEditor] Installing PyInstaller ...
+pip install --quiet pyinstaller || echo [R4TEditor] WARNING: PyInstaller install failed, build will not work.
 
 echo [R4TEditor] All dependencies ready.
 popd

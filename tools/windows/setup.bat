@@ -67,7 +67,6 @@ if "!DEV_MODE!"=="true" (
 echo.
 
 :: --- Step 3: install deps
-echo [R4TEditor] Installing dependencies ...
 call "%SCRIPT_DIR%install_deps.bat"
 echo.
 
