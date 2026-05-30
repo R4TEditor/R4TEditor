@@ -46,7 +46,7 @@ success "Dependencies ready."
 # --- Discord RPC (optional, non-fatal) 
 if ! python -c "import pypresence" &>/dev/null 2>&1; then
     info "Installing pypresence for Discord RPC (optional) …"
-    pip install --quiet pypresence || warn "pypresence install failed — Discord RPC will be disabled."
+    pip install --quiet pypresence || warn "pypresence install failed, Discord RPC will be disabled."
 fi
 
 # --- Launch 

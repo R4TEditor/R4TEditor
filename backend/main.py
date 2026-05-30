@@ -1,5 +1,5 @@
 # Global version =====
-APP_VERSION = "0.2.0-dev"
+APP_VERSION = "0.2.0"
 # ====================
 
 import os
@@ -55,7 +55,6 @@ class _LogBroker:
                 pass
 
     def publish_threadsafe(self, level: str, message: str):
-        """Call this from non-async threads (e.g. the uvicorn worker threads)."""
         if not self._loop:
             self._early_buf.append((level, message))  # buffer instead of silently drop
             return
@@ -108,7 +107,7 @@ def _install_log_capture():
     handler.setLevel(logging.DEBUG)
 
     root = logging.getLogger()
-    root.setLevel(logging.DEBUG)  # default is WARNING — this was silencing everything
+    root.setLevel(logging.DEBUG)  # default is WARNING, this was silencing everything
     root.addHandler(handler)
 
     # Plain stderr handler so output shows in CMD even before any WebSocket
@@ -179,7 +178,7 @@ def _rpc_thread_main(client_id: str, q: _queue.Queue):
         _rpc_enabled = True
         logging.info("Discord RPC: connected successfully!")
     except Exception as e:
-        logging.warning(f"Discord RPC: connect failed — {type(e).__name__}: {e}")
+        logging.warning(f"Discord RPC: connect failed, {type(e).__name__}: {e}")
         return
 
     # Track last known presence so keepalives repeat it accurately
@@ -205,18 +204,18 @@ def _rpc_thread_main(client_id: str, q: _queue.Queue):
     try:
         _do_update("Idle", None)
     except Exception as e:
-        logging.warning(f"Discord RPC: initial update failed — {type(e).__name__}: {e}")
+        logging.warning(f"Discord RPC: initial update failed, {type(e).__name__}: {e}")
 
     while True:
         try:
             msg = q.get(timeout=15)
         except _queue.Empty:
-            # Keepalive — repeat last known state so Discord doesn't drop it
+            # Keepalive, repeat last known state so Discord doesn't drop it
             try:
                 _do_update(_last["details"], _last["state"])
                 logging.info("Discord RPC: keepalive sent")
             except Exception as e:
-                logging.warning(f"Discord RPC: keepalive failed — {type(e).__name__}: {e}")
+                logging.warning(f"Discord RPC: keepalive failed, {type(e).__name__}: {e}")
                 _rpc_enabled = False
                 break
             continue
@@ -239,7 +238,7 @@ def _rpc_thread_main(client_id: str, q: _queue.Queue):
                 )
                 logging.info("Discord RPC: presence updated OK")
         except Exception as e:
-            logging.warning(f"Discord RPC: update failed — {type(e).__name__}: {e}")
+            logging.warning(f"Discord RPC: update failed, {type(e).__name__}: {e}")
             _rpc_enabled = False
             break
 
@@ -636,7 +635,6 @@ async def save_theme(theme_id: str, req: ThemeSaveRequest):
 
 @app.post("/api/themes/upload")
 async def upload_theme(file: UploadFile = File(...)):
-    """Accept a JSON or YAML theme file upload and save it to the user themes directory."""
     filename = file.filename or "uploaded_theme"
     suffix = Path(filename).suffix.lower()
     if suffix not in (".json", ".yaml", ".yml"):
@@ -736,7 +734,7 @@ async def scan_environment(req: DirectoryRequest):
         installed = (skript_entry.get("version") or "").strip()
         if installed and installed != docs_version:
             warning = (
-                f"You should update Skript — "
+                f"You should update Skript, "
                 f"installed: {installed}, latest: {docs_version}"
             )
 
@@ -752,7 +750,6 @@ async def scan_environment(req: DirectoryRequest):
 
 @app.get("/api/syntax/docs")
 async def get_syntax_docs():
-    """Proxy + cache for docs.skriptlang.org/docs.json"""
     data = await _fetch_and_cache(DOCS_JSON_URL, "docs.json")
     if data is None:
         raise HTTPException(503, "Syntax docs unavailable and no cache found")
@@ -760,7 +757,6 @@ async def get_syntax_docs():
 
 @app.get("/api/syntax/addons")
 async def get_syntax_addons():
-    """Proxy + cache for skripthub.net addon syntax list"""
     data = await _fetch_and_cache(HUB_API_URL, "addons.json")
     if data is None:
         raise HTTPException(503, "Addon syntax unavailable and no cache found")
@@ -768,16 +764,10 @@ async def get_syntax_addons():
 
 @app.get("/api/syntax/search")
 async def search_syntax(q: str = "", source: str = "all", limit: int = 80):
-    """
-    Search syntax elements from cached docs/addons.
-    source: 'docs' | 'addons' | 'all'
-    Returns list of {id, name, type, patterns, description, addon, since, source}
-    """
     results = []
     needle = q.strip().lower()
 
     def safe_str(v) -> str:
-        """Coerce any value to a plain string safely."""
         if v is None:
             return ""
         if isinstance(v, list):
@@ -785,7 +775,6 @@ async def search_syntax(q: str = "", source: str = "all", limit: int = 80):
         return str(v)
 
     def safe_patterns(raw) -> list:
-        """Return a list of pattern strings regardless of input shape."""
         if not raw:
             return []
         if isinstance(raw, str):
@@ -848,7 +837,6 @@ async def search_syntax(q: str = "", source: str = "all", limit: int = 80):
 
 @app.get("/api/syntax/status")
 async def get_syntax_status():
-    """Report cache freshness for the UI status indicator"""
     import time
     docs_file  = _cache_path("docs.json")
     addon_file = _cache_path("addons.json")
@@ -998,7 +986,6 @@ async def diagnostics_ws(websocket: WebSocket):
 
 @app.websocket("/ws/logs")
 async def logs_ws(websocket: WebSocket):
-    """Stream backend log output to the debug console in real time."""
     await websocket.accept()
     q = log_broker.subscribe()
     try:
@@ -1039,7 +1026,6 @@ async def rpc_clear():
 # --- Entry point
 
 def _wait_for_server(host: str, port: int, timeout: float = 10.0) -> bool:
-    """Poll until the server is accepting connections or timeout expires."""
     import socket
     import time
     deadline = time.time() + timeout
@@ -1061,7 +1047,7 @@ if __name__ == "__main__":
         server_thread = threading.Thread(target=start_server, daemon=True)
         server_thread.start()
         if not _wait_for_server(HOST, PORT):
-            print("[R4TEditor] Server did not start in time — falling back to browser")
+            print("[R4TEditor] Server did not start in time, falling back to browser")
             raise ImportError("server timeout")  # jump to browser fallback
         window = webview.create_window(
             "R4TEditor",

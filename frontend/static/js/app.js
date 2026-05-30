@@ -1,5 +1,5 @@
 /**
- * R4TEditor — Main Application Logic
+ * R4TEditor, Main Application Logic
  */
 
 // ============================================================
@@ -315,7 +315,7 @@ async function pickFile() {
 }
 
 // ============================================================
-// SFTP — Saved Sites
+// SFTP, Saved Sites
 // Sites are stored in localStorage. Passwords are only saved if savePass is true.
 // ============================================================
 const SFTP_SITES_KEY = "r4t_sftp_sites";
@@ -425,7 +425,7 @@ function renderSftpSitesList() {
 }
 
 // ============================================================
-// SFTP — Active Connections
+// SFTP, Active Connections
 // ============================================================
 
 async function connectSftpSite(site) {
@@ -614,7 +614,7 @@ function activateSidebarSection(name) {
 }
 
 // ============================================================
-// Explorer — Multi-Folder Tabs
+// Explorer, Multi-Folder Tabs
 // ============================================================
 
 /** Adds a folder to the explorer tab bar. Avoids duplicates. */
@@ -1044,7 +1044,7 @@ function initPageFileDrop() {
         if (data?.path) {
           openFile(data.path, file.name);
         } else {
-          // Backend couldn't map the file — read its text content directly
+          // Backend couldn't map the file, read its text content directly
           const text = await file.text();
           const tab = { id: genId(), name: file.name, path: null, content: text, unsaved: false };
           state.tabs.push(tab);
@@ -1205,7 +1205,7 @@ async function saveActiveFile() {
 
   if (tab.sftp) {
     const sessionId = tab.sftpSessionId || state.sftp.sessionId;
-    if (!sessionId) { showNotification("SFTP session lost — reconnect and try again", "error"); return; }
+    if (!sessionId) { showNotification("SFTP session lost, reconnect and try again", "error"); return; }
     try {
       await api("POST", "/api/sftp/write", { session_id: sessionId, path: tab.path, content: tab.content });
       tab.unsaved = false;
@@ -1357,7 +1357,7 @@ function updateHeaderPreview(rawText) {
   const preview = $("header-preview");
   if (!preview) return;
   if (!rawText.trim()) {
-    preview.textContent = "(empty — no header will be added)";
+    preview.textContent = "(empty, no header will be added)";
     preview.style.color = "var(--text-muted)";
     preview.style.fontStyle = "italic";
     return;
@@ -1991,7 +1991,7 @@ async function init() {
   loadHeaderTemplate();
   wireHeaderTemplate();
 
-  // Sidebar resize — invert delta when the sidebar is on the right
+  // Sidebar resize, invert delta when the sidebar is on the right
   // so dragging left still increases width (instead of shrinking it).
   setupResize(
     $("sidebar-resize"),
@@ -2002,7 +2002,7 @@ async function init() {
     () => $("main-layout").classList.contains("layout--sidebar-right")
   );
 
-  // Bottom panel resize — always inverted because the handle is at the top edge
+  // Bottom panel resize, always inverted because the handle is at the top edge
   setupResize(
     $("bottom-resize"),
     () => $("bottom-panel"),
@@ -2078,7 +2078,7 @@ document.addEventListener("DOMContentLoaded", init);
 let _docsSearchTimer = null;
 let _docsCurrentResults = [];
 
-// Safe string coercion — prevents escHtml from crashing on null/number/array values
+// Safe string coercion, prevents escHtml from crashing on null/number/array values
 function safeStr(v) {
   if (v == null) return "";
   if (Array.isArray(v)) return v.join(", ");
@@ -2293,7 +2293,7 @@ function applySmallCaps() {
     _lastSmallCaps = { from, converted, original: sel };
     view.focus();
   } else {
-    // No selection — work on last word before cursor
+    // No selection, work on last word before cursor
     const pos = view.state.selection.main.head;
     const line = view.state.doc.lineAt(pos);
     const textBefore = line.text.slice(0, pos - line.from);
@@ -2421,7 +2421,7 @@ function commitHexInsert() {
   closeHexPicker();
 }
 
-// Wire after DOM ready — hook into existing init flow
+// Wire after DOM ready, hook into existing init flow
 document.addEventListener("DOMContentLoaded", () => {
   // Wire format toolbar after a short delay to ensure DOM is ready
   requestAnimationFrame(wireFormatToolbar);
