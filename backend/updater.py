@@ -1,16 +1,3 @@
-"""
-Auto-updater for R4TEditor.
-
-Only runs when the app is frozen (PyInstaller EXE). Does nothing in dev mode.
-
-Flow:
-  1. Hit the GitHub releases API for the latest release.
-  2. Find the EXE asset by name (R4TEditor.exe on Windows, R4TEditor on Linux/macOS).
-  3. Pull asset.digest — GitHub provides this as "sha256:<hex>" automatically.
-  4. Hash the currently-running EXE.
-  5. If they differ, download the new EXE, replace the current one, relaunch.
-"""
-
 import hashlib
 import logging
 import os
@@ -25,17 +12,16 @@ import httpx
 
 log = logging.getLogger(__name__)
 
-# --- Config ----------------------------------------------------------------
+# --- Config 
 
-GITHUB_OWNER = "your-username"       # TODO: replace with your GitHub username
-GITHUB_REPO  = "R4TEditor"           # TODO: replace with your repo name
+GITHUB_OWNER = "R4TEditor"
+GITHUB_REPO  = "R4TEditor"
 API_URL      = f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/releases/latest"
 
-# Asset name as uploaded to GitHub releases
 EXE_ASSET_NAME = "R4TEditor.exe" if platform.system() == "Windows" else "R4TEditor"
 
 
-# --- Helpers ---------------------------------------------------------------
+# --- Helpers 
 
 def _is_frozen() -> bool:
     """True when running as a PyInstaller bundle."""
@@ -55,13 +41,9 @@ def _hash_file(path: Path) -> str:
     return h.hexdigest()
 
 
-# --- Core ------------------------------------------------------------------
+# --- Core 
 
 def check_and_update(current_version: str) -> None:
-    """
-    Called at startup. Exits early (silently) if not frozen or if already
-    up to date. Replaces the EXE and relaunches if an update is found.
-    """
     if not _is_frozen():
         log.debug("Updater: not frozen, skipping.")
         return
@@ -158,7 +140,6 @@ def _download_and_replace(url: str, target: Path) -> None:
         except Exception:
             pass
 
-    # Download to a temp file in the same directory so the rename is atomic
     tmp_fd, tmp_path_str = tempfile.mkstemp(dir=target.parent, suffix=".tmp")
     tmp_path = Path(tmp_path_str)
     try:
@@ -168,31 +149,22 @@ def _download_and_replace(url: str, target: Path) -> None:
                 with os.fdopen(tmp_fd, "wb") as f:
                     for chunk in r.iter_bytes(65536):
                         f.write(chunk)
-
-        # On Windows: rename current → .old, then tmp → current
         if platform.system() == "Windows":
             target.rename(old_path)
-
         tmp_path.replace(target)
-
-        # Restore execute permission on Linux/macOS
         if platform.system() != "Windows":
             target.chmod(target.stat().st_mode | 0o111)
-
     except Exception:
-        # Clean up the temp file if anything went wrong
         try:
             tmp_path.unlink()
         except Exception:
             pass
         raise
 
-
 def _relaunch(exe: Path) -> None:
     """Replace the current process with the updated EXE."""
     args = [str(exe)] + sys.argv[1:]
     if platform.system() == "Windows":
-        # On Windows os.execv isn't reliable; spawn a new process and exit
         subprocess.Popen(args, close_fds=True)
         sys.exit(0)
     else:
